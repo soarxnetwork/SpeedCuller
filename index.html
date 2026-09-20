@@ -1,0 +1,3199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speed Culler – Post Categorizer</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%230f172a'/%3E%3Cstop offset='100%25' stop-color='%23020617'/%3E%3C/linearGradient%3E%3ClinearGradient id='primary' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2338bdf8'/%3E%3Cstop offset='100%25' stop-color='%232563eb'/%3E%3C/linearGradient%3E%3ClinearGradient id='accent' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23fde047'/%3E%3Cstop offset='100%25' stop-color='%23f59e0b'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23bg)'/%3E%3Crect x='1' y='1' width='62' height='62' rx='15' fill='none' stroke='rgba(255,255,255,0.15)' stroke-width='1.5'/%3E%3Ccircle cx='32' cy='32' r='25' fill='none' stroke='%2338bdf8' stroke-width='1.2' stroke-dasharray='5 3.5' opacity='0.65'/%3E%3Ccircle cx='32' cy='32' r='20' fill='rgba(37,99,235,0.12)' stroke='url(%23primary)' stroke-width='2.8'/%3E%3Cpath d='M35 14 L21 34 L31 34 L27 50 L43 28 L33 28 Z' fill='url(%23accent)'/%3E%3C/svg%3E">
+  <link rel="alternate icon" href="/favicon.svg">
+  <style>
+    :root {
+      --bg: #090b10;
+      --card-bg: #12151f;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      
+      /* 7 Category Colors */
+      --color-general: #3b82f6; /* Blue */
+      --color-quiz: #a855f7;    /* Purple */
+      --color-judges: #f59e0b;  /* Amber */
+      --color-awards: #10b981;  /* Green */
+      --color-mentors: #06b6d4; /* Cyan */
+      --color-other: #f97316;   /* Orange */
+      --color-prizes: #ec4899;  /* Pink */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Fullscreen Viewport */
+    main {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .image-wrapper {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .image-wrapper.zoomed {
+      cursor: grab;
+    }
+
+    .image-wrapper.dragging {
+      cursor: grabbing;
+    }
+
+    #main-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transform-origin: center center;
+      will-change: transform;
+      transition: box-shadow 0.2s ease;
+    }
+
+    #main-image[src=""],
+    #main-image:not([src]) {
+      opacity: 0;
+      visibility: hidden;
+      display: none !important;
+    }
+
+    /* Category Borders */
+    .image-wrapper.cat-general #main-image { box-shadow: inset 0 0 50px rgba(59, 130, 246, 0.35); }
+    .image-wrapper.cat-quiz #main-image { box-shadow: inset 0 0 50px rgba(168, 85, 247, 0.35); }
+    .image-wrapper.cat-judges #main-image { box-shadow: inset 0 0 50px rgba(245, 158, 11, 0.35); }
+    .image-wrapper.cat-awards #main-image { box-shadow: inset 0 0 50px rgba(16, 185, 129, 0.35); }
+    .image-wrapper.cat-mentors #main-image { box-shadow: inset 0 0 50px rgba(6, 182, 212, 0.35); }
+    .image-wrapper.cat-other #main-image { box-shadow: inset 0 0 50px rgba(249, 115, 22, 0.35); }
+    .image-wrapper.cat-prizes #main-image { box-shadow: inset 0 0 50px rgba(236, 72, 153, 0.35); }
+
+    /* ==========================================================================
+       Senior UI/UX Design System: Top Header Bar & Floating Bottom Dock
+       ========================================================================== */
+
+    /* Top Studio Header */
+    .header-bar {
+      position: absolute;
+      top: 14px;
+      left: 18px;
+      right: 18px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      z-index: 25;
+      pointer-events: auto;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1 1 0;
+      min-width: 0;
+      justify-content: flex-start;
+    }
+
+    .header-center {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1 1 0;
+      min-width: 0;
+      justify-content: flex-end;
+    }
+
+    /* Photo Info Badge (Center) */
+    .photo-info-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(13, 16, 24, 0.88);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 5px 14px;
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      pointer-events: auto;
+    }
+
+    .photo-filename {
+      font-size: 12px;
+      font-weight: 600;
+      color: #f3f4f6;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .photo-info-badge .divider {
+      color: rgba(255, 255, 255, 0.2);
+      font-size: 10px;
+    }
+
+    .photo-index {
+      font-size: 12px;
+      font-weight: 700;
+      color: #93c5fd;
+      font-variant-numeric: tabular-nums;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: nowrap;
+    }
+
+    /* Source Segmented Control (Left) */
+    .source-segmented {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(13, 16, 24, 0.9);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 3px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      flex-shrink: 0;
+    }
+
+    .segment-btn {
+      background: transparent;
+      border: none;
+      color: #9ca3af;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 11px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap !important;
+      transition: all 0.15s ease;
+    }
+
+    .segment-btn:hover {
+      color: #f3f4f6;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .segment-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+    }
+
+    .seg-count {
+      background: rgba(255, 255, 255, 0.12);
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .segment-btn.active .seg-count {
+      background: rgba(0, 0, 0, 0.25);
+      color: #fff;
+    }
+
+    /* Pro Tooltip System */
+    .has-tooltip {
+      position: relative;
+    }
+
+    .has-tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: calc(100% + 9px);
+      left: 50%;
+      transform: translateX(-50%) translateY(4px);
+      background: rgba(10, 13, 20, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #f1f5f9;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 8px;
+      white-space: nowrap;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.2);
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.15s;
+      z-index: 1000;
+      letter-spacing: 0.2px;
+    }
+
+    .has-tooltip.tooltip-right::after {
+      left: auto;
+      right: 0;
+      transform: translateY(4px);
+    }
+
+    .has-tooltip:hover::after {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .has-tooltip.tooltip-right:hover::after {
+      transform: translateY(0);
+    }
+
+    /* Shortlist Action Button (Right) */
+    .btn-shortlist {
+      background: rgba(13, 16, 24, 0.94);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      padding: 4px 8px 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      color: #f1f5f9;
+      user-select: none;
+    }
+
+    .btn-action-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    /* Selected state (Remove from Shortlist) */
+    .btn-shortlist.is-selected {
+      border-color: rgba(244, 63, 94, 0.35);
+      color: #ffffff;
+    }
+
+    .btn-shortlist.is-selected .btn-action-icon {
+      background: rgba(244, 63, 94, 0.2);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.35);
+    }
+
+    .btn-shortlist.is-selected:hover {
+      background: rgba(225, 29, 72, 0.16);
+      border-color: #f43f5e;
+      box-shadow: 0 8px 24px rgba(225, 29, 72, 0.25), 0 2px 8px rgba(0, 0, 0, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .btn-shortlist.is-selected:hover .btn-action-icon {
+      background: #f43f5e;
+      color: #ffffff;
+      border-color: #f43f5e;
+    }
+
+    /* Not selected state (Add to Shortlist) */
+    .btn-shortlist.not-selected {
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #ffffff;
+    }
+
+    .btn-shortlist.not-selected .btn-action-icon {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .btn-shortlist.not-selected:hover {
+      background: rgba(16, 185, 129, 0.16);
+      border-color: #10b981;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25), 0 2px 8px rgba(0, 0, 0, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .btn-shortlist.not-selected:hover .btn-action-icon {
+      background: #10b981;
+      color: #ffffff;
+      border-color: #10b981;
+    }
+
+    .kbd-pill {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #94a3b8;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      padding: 2px 6px;
+      border-radius: 5px;
+      box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+      letter-spacing: 0.2px;
+    }
+
+    /* Unified Studio Tool Group */
+    .header-tools-group {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(13, 16, 24, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 3px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      gap: 2px;
+    }
+
+    .header-icon-btn {
+      background: transparent;
+      border: none;
+      color: #9ca3af;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .header-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .tool-svg {
+      width: 16px;
+      height: 16px;
+      stroke-width: 1.9;
+    }
+
+    /* Floating Bottom Category Dock */
+    .bottom-dock {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(13, 16, 24, 0.92);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 5px 8px;
+      border-radius: 36px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.2);
+      pointer-events: auto;
+      max-width: 95vw;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .bottom-dock::-webkit-scrollbar {
+      display: none;
+    }
+
+    .dock-pills-container {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .cat-pill {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap !important;
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .cat-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .cat-pill .cat-num {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-weight: 700;
+      color: #93c5fd;
+    }
+
+    .cat-pill.active .cat-num {
+      background: rgba(0, 0, 0, 0.25);
+      color: inherit;
+    }
+
+    .cat-pill .cat-name {
+      font-weight: 600;
+    }
+
+    .cat-pill .cat-count {
+      background: rgba(255, 255, 255, 0.14);
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cat-pill.active .cat-count {
+      background: rgba(0, 0, 0, 0.22);
+    }
+
+    .filter-wrapper {
+      position: relative;
+    }
+
+    .filter-trigger {
+      background: rgba(13, 16, 24, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #f3f4f6;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap !important;
+      flex-shrink: 0;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      transition: all 0.15s ease;
+    }
+
+    .filter-trigger:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .filter-trigger.is-active {
+      background: rgba(13, 16, 24, 0.96);
+      border-color: #3b82f6;
+      color: #ffffff;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(59, 130, 246, 0.25);
+    }
+
+    .filter-trigger.is-active .filter-text-muted {
+      color: #94a3b8;
+    }
+
+    .filter-trigger.is-active .filter-text-val {
+      color: #60a5fa;
+      font-weight: 700;
+    }
+
+    .btn-clear-inline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      margin-left: 2px;
+      transition: all 0.15s ease;
+      line-height: 1;
+    }
+
+    .btn-clear-inline:hover {
+      background: #ef4444;
+      color: #fff;
+      transform: scale(1.18);
+    }
+
+    .filter-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      background: rgba(18, 21, 31, 0.98);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 6px;
+      min-width: 175px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
+      z-index: 100;
+    }
+
+    .filter-dropdown.show {
+      display: flex;
+    }
+
+    .filter-opt {
+      background: transparent;
+      border: none;
+      color: #d1d5db;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 6px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.1s;
+    }
+
+    .filter-opt:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .filter-opt.active {
+      background: rgba(37, 99, 235, 0.28);
+      color: #60a5fa;
+      font-weight: 800;
+    }
+
+    .filter-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 3px 0;
+    }
+
+    /* Selection Pill on Photo */
+    .selection-pill {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      padding: 7px 16px;
+      border-radius: 24px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      z-index: 20;
+      pointer-events: none;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      transition: all 0.2s ease;
+      display: none;
+    }
+
+    .selection-pill.show {
+      display: block;
+    }
+
+    .selection-pill.selected {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid #10b981;
+      color: #34d399;
+    }
+
+    .selection-pill.unselected {
+      background: rgba(18, 21, 31, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #9ca3af;
+    }
+
+    .btn-add-sel {
+      color: #34d399 !important;
+      border-color: rgba(16, 185, 129, 0.4) !important;
+    }
+
+    /* Project Switcher */
+    .project-wrapper {
+      position: relative;
+    }
+
+    .project-trigger {
+      background: rgba(13, 16, 24, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #f3f4f6;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      transition: all 0.15s ease;
+      max-width: 170px;
+      flex-shrink: 1;
+    }
+
+    .project-trigger:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .project-name-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+      letter-spacing: 0.1px;
+    }
+
+    .project-chevron {
+      color: #94a3b8;
+      font-size: 10px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+
+    .project-wrapper.open .project-chevron {
+      transform: rotate(180deg);
+    }
+
+    .project-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      background: rgba(18, 21, 31, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      padding: 6px;
+      min-width: 320px;
+      max-width: 440px;
+      display: none;
+      flex-direction: column;
+      gap: 3px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
+      z-index: 100;
+    }
+
+    .project-dropdown.show {
+      display: flex;
+    }
+
+    .dropdown-header {
+      font-size: 10px;
+      font-weight: 800;
+      color: #6b7280;
+      letter-spacing: 0.5px;
+      padding: 6px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 2px;
+    }
+
+    .project-opt {
+      background: transparent;
+      border: none;
+      color: #d1d5db;
+      padding: 8px 10px;
+      border-radius: 8px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      transition: all 0.1s;
+    }
+
+    .project-opt:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .project-opt.active {
+      background: rgba(37, 99, 235, 0.24);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .project-opt-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .project-opt-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #f3f4f6;
+      word-break: break-word;
+    }
+
+    .project-opt-path {
+      font-size: 10px;
+      color: #9ca3af;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .project-opt.active .project-opt-name {
+      color: #60a5fa;
+      font-weight: 700;
+    }
+
+    .proj-check {
+      color: #60a5fa;
+      font-weight: 800;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .project-add-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      color: #38bdf8;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+      margin-top: 2px;
+    }
+
+    .project-add-btn:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: #38bdf8;
+    }
+
+    /* Modal Dialog */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-box {
+      background: #12151f;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 540px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .btn-close-modal {
+      background: transparent;
+      border: none;
+      color: #9ca3af;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .btn-close-modal:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #d1d5db;
+    }
+
+    .form-group input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .form-group input:focus {
+      border-color: #3b82f6;
+    }
+
+    .path-preview {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: #60a5fa;
+      word-break: break-all;
+    }
+
+    .discovered-tags {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .tags-label {
+      font-size: 11px;
+      color: #9ca3af;
+      font-weight: 600;
+    }
+
+    .tags-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .tag-chip {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #cbd5e1;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+
+    .tag-chip:hover {
+      background: #2563eb;
+      color: #fff;
+      border-color: #2563eb;
+    }
+
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #d1d5db;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-cancel:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-submit {
+      background: #2563eb;
+      border: none;
+      color: #fff;
+      padding: 7px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-submit:hover {
+      background: #1d4ed8;
+    }
+
+    .cat-chips-editor {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      min-height: 44px;
+      align-items: center;
+    }
+
+    .edit-cat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #f3f4f6;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .edit-cat-chip kbd {
+      background: rgba(0, 0, 0, 0.35);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 10px;
+      color: #93c5fd;
+    }
+
+    .edit-cat-chip .btn-del-chip {
+      background: transparent;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      padding: 0 2px;
+    }
+
+    .edit-cat-chip .btn-del-chip:hover {
+      color: #f87171;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #93c5fd;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+
+    .preset-btn:hover {
+      background: rgba(37, 99, 235, 0.25);
+      border-color: #3b82f6;
+      color: #fff;
+    }
+
+    .category-badge,
+    .counter-badge {
+      display: none !important;
+    }
+
+    /* Toast */
+    .toast {
+      position: absolute;
+      top: 75px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: rgba(18, 21, 31, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 7px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0;
+      transition: all 0.2s ease;
+      z-index: 100;
+      pointer-events: none;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Grid View Modal */
+    .grid-view {
+      position: absolute;
+      inset: 0;
+      background: #090b10;
+      z-index: 30;
+      display: none;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .grid-view.active {
+      display: flex;
+    }
+
+    .grid-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .grid-tabs {
+      display: flex;
+      gap: 6px;
+    }
+
+    .grid-tab-btn {
+      background: #181d2a;
+      border: 1px solid var(--border);
+      color: #9ca3af;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .grid-tab-btn.active {
+      background: #2563eb;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 12px;
+    }
+
+    .grid-item {
+      aspect-ratio: 3/2;
+      background: #151923;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .grid-item:hover {
+      transform: scale(1.03);
+    }
+
+    .grid-item.cat-general { border-color: var(--color-general); }
+    .grid-item.cat-quiz { border-color: var(--color-quiz); }
+    .grid-item.cat-judges { border-color: var(--color-judges); }
+    .grid-item.cat-awards { border-color: var(--color-awards); }
+    .grid-item.cat-mentors { border-color: var(--color-mentors); }
+    .grid-item.cat-other { border-color: var(--color-other); }
+    .grid-item.cat-prizes { border-color: var(--color-prizes); }
+
+    .grid-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .grid-item .badge {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .grid-item .badge-general { background: var(--color-general); color: #fff; }
+    .grid-item .badge-quiz { background: var(--color-quiz); color: #fff; }
+    .grid-item .badge-judges { background: var(--color-judges); color: #000; }
+    .grid-item .badge-awards { background: var(--color-awards); color: #fff; }
+    .grid-item .badge-mentors { background: var(--color-mentors); color: #000; }
+    .grid-item .badge-other { background: var(--color-other); color: #fff; }
+    .grid-item .badge-prizes { background: var(--color-prizes); color: #fff; }
+
+    /* ==========================================================================
+       Disconnected State View (Senior UI/UX Pro Design)
+       ========================================================================== */
+    .disconnected-view {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, rgba(18, 22, 34, 0.95) 0%, rgba(8, 10, 15, 0.98) 100%);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      z-index: 20;
+      padding: 24px;
+      animation: fadeInDisc 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeInDisc {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .disconnected-card {
+      max-width: 540px;
+      width: 100%;
+      background: rgba(15, 18, 28, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 34px 30px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(239, 68, 68, 0.15), 0 0 40px rgba(239, 68, 68, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .disconnected-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.6), rgba(245, 158, 11, 0.6), transparent);
+    }
+
+    .disconnected-icon-wrap {
+      position: relative;
+      width: 76px;
+      height: 76px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .beacon-pulse {
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, rgba(245, 158, 11, 0.08) 70%, transparent 100%);
+      animation: beaconRipples 2.4s infinite cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    @keyframes beaconRipples {
+      0% { transform: scale(0.8); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 0.2; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    .disconnected-icon {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, rgba(30, 36, 54, 0.95) 0%, rgba(20, 24, 38, 0.98) 100%);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #f87171;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    }
+
+    .disconnected-icon svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    .unplug-badge {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      background: #dc2626;
+      color: #fff;
+      font-size: 11px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #0f121c;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    .disconnected-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      color: #fca5a5;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+      animation: blinkDot 1.4s ease-in-out infinite;
+    }
+
+    @keyframes blinkDot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .disconnected-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f3f4f6;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+
+    .disconnected-desc {
+      font-size: 13px;
+      color: #9ca3af;
+      line-height: 1.5;
+      margin-bottom: 18px;
+      max-width: 440px;
+    }
+
+    /* Safe Guarantee Box */
+    .safe-guarantee-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 12px;
+      padding: 12px 14px;
+      text-align: left;
+      margin-bottom: 18px;
+      width: 100%;
+    }
+
+    .safe-icon {
+      font-size: 20px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .safe-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #34d399;
+      margin-bottom: 2px;
+    }
+
+    .safe-text {
+      font-size: 11px;
+      color: #a7f3d0;
+      line-height: 1.4;
+      opacity: 0.9;
+    }
+
+    /* Meta Grid */
+    .disconnected-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      width: 100%;
+      margin-bottom: 18px;
+    }
+
+    .meta-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 10px;
+      padding: 10px 12px;
+      text-align: left;
+      overflow: hidden;
+    }
+
+    .meta-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .meta-val {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #e5e7eb;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Auto-Reconnect Heartbeat */
+    .reconnect-heartbeat {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      background: rgba(37, 99, 235, 0.1);
+      border: 1px solid rgba(37, 99, 235, 0.25);
+      padding: 6px 14px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      font-size: 11px;
+      color: #93c5fd;
+    }
+
+    .heartbeat-indicator {
+      position: relative;
+      width: 10px;
+      height: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pulse-ring {
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 2px solid #3b82f6;
+      animation: pulseAnim 1.6s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+
+    .pulse-core {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #3b82f6;
+    }
+
+    @keyframes pulseAnim {
+      0% { transform: scale(0.5); opacity: 1; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+
+    /* Action Buttons */
+    .disconnected-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-disc-primary {
+      background: #2563eb;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 9px 18px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.15s ease;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-disc-primary:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5);
+    }
+
+    .btn-disc-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: #e5e7eb;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-disc-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .btn-spin-icon {
+      width: 14px;
+      height: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Main Viewport -->
+  <main>
+    <div class="image-wrapper" id="image-wrapper">
+      <img id="main-image" src="" alt="" />
+      <div class="selection-pill" id="selection-pill"></div>
+    </div>
+
+    <!-- Disconnected State Screen -->
+    <div class="disconnected-view" id="disconnected-view" style="display: none;">
+      <div class="disconnected-card">
+        <div class="disconnected-icon-wrap">
+          <div class="beacon-pulse"></div>
+          <div class="disconnected-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="14" rx="3"></rect>
+              <line x1="6" y1="12" x2="6.01" y2="12"></line>
+              <line x1="10" y1="12" x2="14" y2="12"></line>
+              <path d="M18 12h.01"></path>
+              <path d="M6 18h12"></path>
+            </svg>
+            <span class="unplug-badge">⚡</span>
+          </div>
+        </div>
+
+        <div class="disconnected-badge-pill">
+          <span class="status-dot"></span>
+          <span>STORAGE OFFLINE</span>
+        </div>
+
+        <h2 class="disconnected-title">External Drive Disconnected</h2>
+        <p class="disconnected-desc">
+          Speed Culler detected that your external storage drive was unplugged or unmounted.
+        </p>
+
+        <!-- Safe Guarantee Box -->
+        <div class="safe-guarantee-box">
+          <div class="safe-icon">🛡️</div>
+          <div class="safe-content">
+            <div class="safe-title">Your work is 100% safe & preserved</div>
+            <div class="safe-text">All categorized photos, shortlist selections, and folder structures on disk are intact. No changes were lost.</div>
+          </div>
+        </div>
+
+        <!-- Drive & Project Details -->
+        <div class="disconnected-meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Expected Volume</span>
+            <span class="meta-val" id="disc-vol-path">/Volumes/C</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Active Project</span>
+            <span class="meta-val" id="disc-proj-name">Microsoft Visit - SVIET Impact AI Ideathon</span>
+          </div>
+        </div>
+
+        <!-- Auto-Reconnect Heartbeat -->
+        <div class="reconnect-heartbeat">
+          <div class="heartbeat-indicator">
+            <span class="pulse-ring"></span>
+            <span class="pulse-core"></span>
+          </div>
+          <span class="heartbeat-text" id="disc-heartbeat-text">Auto-detecting... Plug your hard drive back in to resume automatically.</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="disconnected-actions">
+          <button class="btn-disc-primary" id="btn-check-drive" onclick="retryDriveConnection()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-spin-icon">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            <span>Check Connection Now</span>
+          </button>
+          <button class="btn-disc-secondary" onclick="toggleProjectMenu()">
+            <span>📁 Switch Project</span>
+          </button>
+          <button class="btn-disc-secondary" onclick="openNewProjectModal()">
+            <span>+ Work on Local Folder</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Studio Header -->
+    <header class="header-bar" id="header-bar">
+      <!-- Left: Project Switcher + Source Switcher + Filter Dropdown -->
+      <div class="header-left">
+        <!-- Project Switcher -->
+        <div class="project-wrapper">
+          <button class="project-trigger has-tooltip" id="project-trigger" onclick="toggleProjectMenu()" data-tooltip="Switch or Add Projects">
+            <span class="proj-icon">📁</span>
+            <span class="project-name-label" id="project-name-label">Project</span>
+            <span class="project-chevron">▾</span>
+          </button>
+          <div class="project-dropdown" id="project-dropdown">
+            <div class="dropdown-header">PROJECTS</div>
+            <div id="project-list-items"></div>
+            <button class="project-add-btn" onclick="openNewProjectModal()">+ Add Folder / Project...</button>
+          </div>
+        </div>
+
+        <!-- Segmented Source Toggle -->
+        <div class="source-segmented">
+          <button class="segment-btn active" id="btn-src-selected" onclick="switchSource('selected')" title="Shortlist photos (Shortcut: M)">
+            ⚡ Shortlist <span class="seg-count" id="source-selected-count">0</span>
+          </button>
+          <button class="segment-btn" id="btn-src-master" onclick="switchSource('master')" title="All photos in folder (Shortcut: M)">
+            📷 All <span class="seg-count" id="source-master-count">0</span>
+          </button>
+        </div>
+
+        <!-- Filter Dropdown -->
+        <div class="filter-wrapper">
+          <button class="filter-trigger" id="filter-trigger" onclick="toggleFilterMenu()">
+            <span id="filter-label">Filter: All</span> ▾
+            <span class="btn-clear-inline" id="btn-clear-inline" onclick="event.stopPropagation(); applyFilter('All');" title="Clear filter (Esc)" style="display:none;">✕</span>
+          </button>
+          <div class="filter-dropdown" id="filter-dropdown">
+            <button class="filter-opt active" id="fopt-all" onclick="applyFilter('All')">All Photos (<span id="fcount-all">0</span>)</button>
+            <button class="filter-opt" id="fopt-uncategorized" onclick="applyFilter('Uncategorized')">○ Uncategorized (<span id="fcount-uncategorized">0</span>)</button>
+            <div class="filter-divider"></div>
+            <div id="dynamic-filter-opts"></div>
+            <div class="filter-divider master-only" style="display:none;"></div>
+            <button class="filter-opt master-only" id="fopt-selected" onclick="applyFilter('Selected')" style="display:none;">✓ Selected Only</button>
+            <button class="filter-opt master-only" id="fopt-unselected" onclick="applyFilter('Unselected')" style="display:none;">○ Unselected Only</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Filename & Position Counter -->
+      <div class="header-center">
+        <div class="photo-info-badge">
+          <span class="photo-filename" id="photo-filename">Loading...</span>
+          <span class="divider">•</span>
+          <span class="photo-index" id="stat-info">0 / 0</span>
+        </div>
+      </div>
+
+      <!-- Right: Shortlist Toggle & Tools -->
+      <div class="header-right">
+        <button class="btn-shortlist is-selected has-tooltip" id="btn-toggle-select" onclick="toggleCurrentSelection()" data-tooltip="Remove from Shortlist (Space)">
+          <span class="btn-action-icon remove">✕</span>
+          <span class="btn-action-text">Remove</span>
+          <kbd class="kbd-pill">Space</kbd>
+        </button>
+
+        <!-- Studio Tools Group -->
+        <div class="header-tools-group">
+          <button class="header-icon-btn has-tooltip" id="btn-manage-cats" onclick="openManageCategoriesModal()" data-tooltip="Categories & Tags">
+            <svg class="tool-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+              <line x1="7" y1="7" x2="7.01" y2="7"></line>
+            </svg>
+          </button>
+          <button class="header-icon-btn has-tooltip" id="btn-grid" onclick="openGrid()" data-tooltip="Grid View (G)">
+            <svg class="tool-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+            </svg>
+          </button>
+          <button class="header-icon-btn has-tooltip" id="btn-open-folder" onclick="fetch('/api/open_dest', {method:'POST'})" data-tooltip="Open in Finder (O)">
+            <svg class="tool-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </button>
+          <button class="header-icon-btn has-tooltip tooltip-right" id="btn-fullscreen" onclick="toggleFullscreen()" data-tooltip="Fullscreen (F)">
+            <svg class="tool-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <polyline points="9 21 3 21 3 15"></polyline>
+              <line x1="21" y1="3" x2="14" y2="10"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Floating Bottom Category Dock -->
+    <nav class="bottom-dock" id="bottom-dock" aria-label="Category Shortcuts">
+      <div id="dynamic-cat-pills" class="dock-pills-container"></div>
+    </nav>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">Assigned to Category</div>
+
+    <!-- Grid View Modal -->
+    <div class="grid-view" id="grid-view">
+      <div class="grid-header">
+        <div class="grid-tabs">
+          <button class="grid-tab-btn active" id="tab-all" onclick="filterGrid('All')">All</button>
+          <button class="grid-tab-btn" id="tab-uncategorized" onclick="filterGrid('Uncategorized')">○ Uncategorized</button>
+          <button class="grid-tab-btn master-only" id="tab-selected" onclick="filterGrid('Selected')" style="display:none;">✓ Selected</button>
+          <button class="grid-tab-btn master-only" id="tab-unselected" onclick="filterGrid('Unselected')" style="display:none;">○ Unselected</button>
+          <div id="grid-cat-tabs" style="display:inline-flex; gap:6px;"></div>
+        </div>
+        <button id="btn-close-grid" class="btn-icon" style="background: #2563eb;">✕ Close (Esc)</button>
+      </div>
+      <div class="grid-container" id="grid-container"></div>
+    </div>
+  </main>
+
+  <!-- Add New Project Modal -->
+  <div class="modal-overlay" id="modal-project" style="display: none;" onclick="handleModalOverlayClick(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>📁 Add Folder / Project</h3>
+        <button class="btn-close-modal" onclick="closeNewProjectModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Project Name</label>
+          <input type="text" id="input-proj-name" placeholder="e.g. 5th hack photos" oninput="updatePathPreview()">
+        </div>
+        <div class="form-group">
+          <label>Source Photos Folder Path</label>
+          <input type="text" id="input-proj-source" placeholder="/Volumes/C/5th hack photos" oninput="onFolderPathInput()">
+          
+          <div class="discovered-tags" id="discovered-tags-box" style="display:none;">
+            <span class="tags-label">Detected Folders on /Volumes/C:</span>
+            <div class="tags-list" id="discovered-chips"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Selected Output Directory (Automatic)</label>
+          <div class="path-preview" id="preview-output-path">/Volumes/C/Selected/...</div>
+        </div>
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2px;">
+            <label>Project Categories</label>
+            <div style="display:flex; gap:4px;">
+              <button type="button" class="preset-btn" onclick="applyNewProjPreset('hackathon')">Event/Hackathon</button>
+              <button type="button" class="preset-btn" onclick="applyNewProjPreset('wedding')">Wedding/Shoot</button>
+              <button type="button" class="preset-btn" onclick="applyNewProjPreset('quick')">Quick 3</button>
+            </div>
+          </div>
+          <div class="cat-chips-editor" id="new-proj-cat-chips"></div>
+          <div style="display:flex; gap:6px; margin-top: 6px;">
+            <input type="text" id="input-new-cat-name" placeholder="Type category & press Enter..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addNewProjCatChip();}">
+            <button type="button" class="btn-icon" onclick="addNewProjCatChip()" style="background:#2563eb; color:#fff; border:none; padding:7px 12px;">+ Add</button>
+          </div>
+          <span style="font-size: 11px; color: #9ca3af;">Each category gets a subfolder inside Categories/ and shortcuts 1–N</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeNewProjectModal()">Cancel</button>
+        <button class="btn-submit" id="btn-create-project" onclick="submitNewProject()">Create & Open Project</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Categories Modal for Active Project -->
+  <div class="modal-overlay" id="modal-categories" style="display: none;" onclick="handleCatModalOverlayClick(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>🏷️ Manage Project Categories</h3>
+        <button class="btn-close-modal" onclick="closeManageCategoriesModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 12px; color: #9ca3af;">
+          Customize categories for <strong id="manage-cats-project-name" style="color:#60a5fa;">Active Project</strong>. New folders are created under <code style="color:#93c5fd;">Categories/</code> automatically.
+        </p>
+
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2px;">
+            <label>Categories</label>
+            <div style="display:flex; gap:4px;">
+              <button type="button" class="preset-btn" onclick="applyManagePreset('hackathon')">Event/Hackathon</button>
+              <button type="button" class="preset-btn" onclick="applyManagePreset('wedding')">Wedding/Shoot</button>
+              <button type="button" class="preset-btn" onclick="applyManagePreset('quick')">Quick 3</button>
+            </div>
+          </div>
+          <div class="cat-chips-editor" id="manage-cat-chips"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Add New Category</label>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="input-manage-cat-name" placeholder="e.g. Sponsors, Pitches, Candid..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addManageCatChip();}">
+            <button type="button" class="btn-icon" onclick="addManageCatChip()" style="background:#2563eb; color:#fff; border:none; padding:7px 14px;">+ Add</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeManageCategoriesModal()">Cancel</button>
+        <button class="btn-submit" id="btn-save-categories" onclick="saveActiveProjectCategories()">Save Categories</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let projectsData = null;
+    let activeCategories = {};
+    let selectedPhotos = [];
+    let masterPhotos = [];
+    let selectedSet = new Set();
+    let assignedMap = {}; // filename -> category string
+    
+    let sourceMode = 'selected'; // 'selected' | 'master'
+    let activeFilter = 'All';
+    let currentDisplayList = [];
+    let currentIndex = 0;
+
+    const preloadBuffer = 10;
+    const preloadedImages = new Map();
+
+    const CAT_COLOR_MAP = {
+      '1': { color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.35)' },
+      '2': { color: '#a855f7', bg: 'rgba(168, 85, 247, 0.35)' },
+      '3': { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.35)' },
+      '4': { color: '#10b981', bg: 'rgba(16, 185, 129, 0.35)' },
+      '5': { color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.35)' },
+      '6': { color: '#f97316', bg: 'rgba(249, 115, 22, 0.35)' },
+      '7': { color: '#ec4899', bg: 'rgba(236, 72, 153, 0.35)' },
+      '8': { color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.35)' },
+      '9': { color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.35)' }
+    };
+
+    // Zoom State
+    let scale = 1.0;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+
+    const mainImg = document.getElementById('main-image');
+    const imageWrapper = document.getElementById('image-wrapper');
+    const statInfo = document.getElementById('stat-info');
+    const photoFilename = document.getElementById('photo-filename');
+    const toast = document.getElementById('toast');
+    const selectionPill = document.getElementById('selection-pill');
+
+    const btnSrcSelected = document.getElementById('btn-src-selected');
+    const btnSrcMaster = document.getElementById('btn-src-master');
+    const sourceSelectedCount = document.getElementById('source-selected-count');
+    const sourceMasterCount = document.getElementById('source-master-count');
+
+    const filterTrigger = document.getElementById('filter-trigger');
+    const filterDropdown = document.getElementById('filter-dropdown');
+    const filterLabel = document.getElementById('filter-label');
+
+    const btnToggleSelect = document.getElementById('btn-toggle-select');
+    const gridView = document.getElementById('grid-view');
+    const gridContainer = document.getElementById('grid-container');
+    const modalProject = document.getElementById('modal-project');
+    let isDriveDisconnected = false;
+    let drivePollingTimer = null;
+    const bottomDock = document.getElementById('bottom-dock');
+
+    function showDisconnectedView(data) {
+      isDriveDisconnected = true;
+      const discView = document.getElementById('disconnected-view');
+      if (discView) discView.style.display = 'flex';
+      
+      const imgWrap = document.getElementById('image-wrapper');
+      if (imgWrap) imgWrap.style.display = 'none';
+
+      const volPath = data.volume_path || (data.active_project && data.active_project.source_dir) || '/Volumes/C';
+      const projName = (data.active_project && data.active_project.name) || 'Current Project';
+      
+      const elVol = document.getElementById('disc-vol-path');
+      if (elVol) elVol.textContent = volPath;
+      
+      const elProj = document.getElementById('disc-proj-name');
+      if (elProj) elProj.textContent = projName;
+
+      if (photoFilename) {
+        photoFilename.textContent = 'Drive Disconnected';
+      }
+      if (statInfo) {
+        statInfo.textContent = 'Offline';
+      }
+      if (bottomDock) {
+        bottomDock.style.opacity = '0.35';
+        bottomDock.style.pointerEvents = 'none';
+      }
+      if (btnToggleSelect) {
+        btnToggleSelect.style.opacity = '0.4';
+        btnToggleSelect.style.pointerEvents = 'none';
+      }
+    }
+
+    function hideDisconnectedView() {
+      isDriveDisconnected = false;
+      const discView = document.getElementById('disconnected-view');
+      if (discView) discView.style.display = 'none';
+
+      const imgWrap = document.getElementById('image-wrapper');
+      if (imgWrap) imgWrap.style.display = 'flex';
+
+      if (bottomDock) {
+        bottomDock.style.opacity = '1';
+        bottomDock.style.pointerEvents = 'auto';
+      }
+      if (btnToggleSelect) {
+        btnToggleSelect.style.opacity = '1';
+        btnToggleSelect.style.pointerEvents = 'auto';
+      }
+    }
+
+    function startDriveReconnectPolling() {
+      if (drivePollingTimer) return;
+      drivePollingTimer = setInterval(async () => {
+        try {
+          const res = await fetch('/api/photos');
+          const data = await res.json();
+          if (data.drive_connected !== false) {
+            stopDriveReconnectPolling();
+            await loadPhotos();
+          }
+        } catch (e) {
+          // Keep polling
+        }
+      }, 2500);
+    }
+
+    function stopDriveReconnectPolling() {
+      if (drivePollingTimer) {
+        clearInterval(drivePollingTimer);
+        drivePollingTimer = null;
+      }
+    }
+
+    async function retryDriveConnection() {
+      const btn = document.getElementById('btn-check-drive');
+      if (btn) {
+        btn.innerHTML = '<span class="status-dot"></span> Checking drive...';
+        btn.disabled = true;
+      }
+      try {
+        const res = await fetch('/api/photos');
+        const data = await res.json();
+        if (data.drive_connected !== false) {
+          hideDisconnectedView();
+          stopDriveReconnectPolling();
+          await loadPhotos();
+          showToast('✓ External drive connected!');
+        } else {
+          showToast('⚠️ Drive still not detected. Please plug in /Volumes/C');
+        }
+      } catch (e) {
+        showToast('⚠️ Connection check failed.');
+      } finally {
+        if (btn) {
+          btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-spin-icon"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg><span>Check Connection Now</span>';
+          btn.disabled = false;
+        }
+      }
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1400);
+    }
+
+    function applyTransform() {
+      if (scale <= 1.02) {
+        scale = 1.0;
+        panX = 0;
+        panY = 0;
+        mainImg.style.transform = 'none';
+        imageWrapper.classList.remove('zoomed', 'dragging');
+      } else {
+        mainImg.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+        imageWrapper.classList.add('zoomed');
+      }
+    }
+
+    function resetZoom() {
+      scale = 1.0;
+      panX = 0;
+      panY = 0;
+      applyTransform();
+    }
+
+    // Wheel Zoom
+    imageWrapper.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = mainImg.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const oldScale = scale;
+      const zoomFactor = e.deltaY < 0 ? 1.18 : 0.85;
+      scale = Math.min(Math.max(1.0, scale * zoomFactor), 8.0);
+
+      if (scale > 1.0) {
+        const factor = scale / oldScale;
+        panX = (panX - (mouseX - rect.width / 2)) * factor + (mouseX - rect.width / 2);
+        panY = (panY - (mouseY - rect.height / 2)) * factor + (mouseY - rect.height / 2);
+      } else {
+        panX = 0;
+        panY = 0;
+      }
+      applyTransform();
+    }, { passive: false });
+
+    // Drag to Pan
+    imageWrapper.addEventListener('mousedown', (e) => {
+      if (scale > 1.0) {
+        isDragging = true;
+        startX = e.clientX - panX;
+        startY = e.clientY - panY;
+        imageWrapper.classList.add('dragging');
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      panX = e.clientX - startX;
+      panY = e.clientY - startY;
+      applyTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        imageWrapper.classList.remove('dragging');
+      }
+    });
+
+    // Double-Click Zoom Face (2.5x)
+    imageWrapper.addEventListener('dblclick', (e) => {
+      if (scale > 1.0) {
+        resetZoom();
+      } else {
+        scale = 2.5;
+        const rect = imageWrapper.getBoundingClientRect();
+        panX = (rect.width / 2 - e.clientX) * 1.5;
+        panY = (rect.height / 2 - e.clientY) * 1.5;
+        applyTransform();
+      }
+    });
+
+    function computeDisplayList() {
+      const basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
+
+      if (activeFilter === 'All') {
+        return basePool;
+      }
+      if (activeFilter === 'Uncategorized') {
+        return basePool.filter(f => !assignedMap[f]);
+      }
+      if (activeFilter === 'Selected') {
+        return basePool.filter(f => selectedSet.has(f));
+      }
+      if (activeFilter === 'Unselected') {
+        return basePool.filter(f => !selectedSet.has(f));
+      }
+      return basePool.filter(f => assignedMap[f] === activeFilter);
+    }
+
+    function renderCategoryPills() {
+      const container = document.getElementById('dynamic-cat-pills');
+      if (!container) return;
+      container.innerHTML = '';
+
+      Object.entries(activeCategories).forEach(([key, name]) => {
+        const colorObj = CAT_COLOR_MAP[key] || { color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.35)' };
+        const btn = document.createElement('button');
+        btn.className = 'cat-pill';
+        btn.id = `btn-cat-${key}`;
+        btn.title = `Shortcut: ${key}`;
+        btn.onclick = () => assignCurrent(name);
+        btn.innerHTML = `<span class="cat-num">${key}</span><span class="cat-name">${name}</span><span class="cat-count" id="count-${key}">0</span>`;
+        container.appendChild(btn);
+      });
+    }
+
+    function renderFilterDropdown() {
+      const container = document.getElementById('dynamic-filter-opts');
+      if (!container) return;
+      container.innerHTML = '';
+
+      Object.entries(activeCategories).forEach(([key, name]) => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-opt';
+        btn.id = `fopt-cat-${key}`;
+        btn.onclick = () => applyFilter(name);
+        btn.innerHTML = `${key} ${name} (<span id="fcount-${key}">0</span>)`;
+        container.appendChild(btn);
+      });
+    }
+
+    function renderGridTabs() {
+      const container = document.getElementById('grid-cat-tabs');
+      if (!container) return;
+      container.innerHTML = '';
+
+      Object.entries(activeCategories).forEach(([key, name]) => {
+        const btn = document.createElement('button');
+        btn.className = 'grid-tab-btn';
+        btn.id = `tab-cat-${key}`;
+        btn.onclick = () => filterGrid(name);
+        btn.textContent = name;
+        container.appendChild(btn);
+      });
+    }
+
+    function updateCounts() {
+      const counts = {};
+      Object.values(activeCategories).forEach(cat => counts[cat] = 0);
+
+      const basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
+      let uncategorizedCount = 0;
+
+      for (const fname of basePool) {
+        const cat = assignedMap[fname];
+        if (cat && counts[cat] !== undefined) {
+          counts[cat]++;
+        } else {
+          uncategorizedCount++;
+        }
+      }
+
+      Object.entries(activeCategories).forEach(([key, name]) => {
+        const countEl = document.getElementById(`count-${key}`);
+        if (countEl) countEl.textContent = counts[name] || 0;
+        const fcountEl = document.getElementById(`fcount-${key}`);
+        if (fcountEl) fcountEl.textContent = counts[name] || 0;
+      });
+
+      const fcountUncat = document.getElementById('fcount-uncategorized');
+      if (fcountUncat) {
+        fcountUncat.textContent = uncategorizedCount;
+        if (uncategorizedCount > 0) {
+          fcountUncat.style.color = '#fbbf24';
+          fcountUncat.style.fontWeight = '700';
+        } else {
+          fcountUncat.style.color = '';
+          fcountUncat.style.fontWeight = '';
+        }
+      }
+
+      const fcountAll = document.getElementById('fcount-all');
+      if (fcountAll) fcountAll.textContent = basePool.length;
+
+      if (sourceSelectedCount) sourceSelectedCount.textContent = selectedPhotos.length;
+      if (sourceMasterCount) sourceMasterCount.textContent = masterPhotos.length;
+
+      const tabAll = document.getElementById('tab-all');
+      if (tabAll) {
+        tabAll.textContent = (sourceMode === 'master') ? `All (${masterPhotos.length})` : `All (${selectedPhotos.length})`;
+      }
+      const tabSel = document.getElementById('tab-selected');
+      if (tabSel) tabSel.textContent = `✓ Selected (${selectedPhotos.length})`;
+      const tabUnsel = document.getElementById('tab-unselected');
+      if (tabUnsel) tabUnsel.textContent = `○ Unselected (${masterPhotos.length - selectedPhotos.length})`;
+      const tabUncat = document.getElementById('tab-uncategorized');
+      if (tabUncat) {
+        tabUncat.textContent = `○ Uncategorized (${uncategorizedCount})`;
+        if (uncategorizedCount > 0) {
+          tabUncat.style.color = '#fbbf24';
+        } else {
+          tabUncat.style.color = '';
+        }
+      }
+
+      Object.entries(activeCategories).forEach(([key, name]) => {
+        const gtab = document.getElementById(`tab-cat-${key}`);
+        if (gtab) gtab.textContent = `${name} (${counts[name] || 0})`;
+      });
+
+      updateFilterUI();
+    }
+
+    function updateFilterUI() {
+      const btnClearInline = document.getElementById('btn-clear-inline');
+
+      if (filterLabel) {
+        if (activeFilter === 'All') {
+          filterLabel.innerHTML = `Filter: All (${currentDisplayList.length})`;
+          filterTrigger.classList.remove('is-active');
+          if (btnClearInline) btnClearInline.style.display = 'none';
+        } else if (activeFilter === 'Uncategorized') {
+          filterLabel.innerHTML = `<span class="filter-text-muted">Filter:</span> <span class="filter-text-val">Uncategorized (${currentDisplayList.length})</span>`;
+          filterTrigger.classList.add('is-active');
+          if (btnClearInline) btnClearInline.style.display = 'inline-flex';
+        } else {
+          filterLabel.innerHTML = `<span class="filter-text-muted">Filter:</span> <span class="filter-text-val">${activeFilter} (${currentDisplayList.length})</span>`;
+          filterTrigger.classList.add('is-active');
+          if (btnClearInline) btnClearInline.style.display = 'inline-flex';
+        }
+      }
+
+      document.querySelectorAll('.filter-opt').forEach(opt => {
+        const id = opt.id;
+        if (activeFilter === 'All' && id === 'fopt-all') {
+          opt.classList.add('active');
+        } else if (activeFilter === 'Uncategorized' && id === 'fopt-uncategorized') {
+          opt.classList.add('active');
+        } else {
+          let match = false;
+          Object.entries(activeCategories).forEach(([key, name]) => {
+            if (activeFilter === name && id === `fopt-cat-${key}`) match = true;
+          });
+          if (activeFilter === 'Selected' && id === 'fopt-selected') match = true;
+          if (activeFilter === 'Unselected' && id === 'fopt-unselected') match = true;
+          opt.classList.toggle('active', match);
+        }
+      });
+    }
+
+    function toggleFilterMenu() {
+      filterDropdown.classList.toggle('show');
+    }
+
+    function closeFilterMenu() {
+      filterDropdown.classList.remove('show');
+    }
+
+    function switchSource(mode) {
+      if (sourceMode === mode) return;
+      sourceMode = mode;
+      
+      btnSrcSelected.classList.toggle('active', mode === 'selected');
+      btnSrcMaster.classList.toggle('active', mode === 'master');
+
+      document.querySelectorAll('.master-only').forEach(el => {
+        el.style.display = (mode === 'master') ? 'block' : 'none';
+      });
+
+      const currentFile = currentDisplayList[currentIndex];
+      currentDisplayList = computeDisplayList();
+
+      if (currentFile && currentDisplayList.includes(currentFile)) {
+        currentIndex = currentDisplayList.indexOf(currentFile);
+      } else {
+        currentIndex = 0;
+      }
+
+      updateCounts();
+      updateFilterUI();
+      updateView();
+      saveCurrentState();
+
+      showToast(mode === 'master' ? '📷 Switched to All Photos' : '⚡ Switched to Shortlist');
+    }
+
+    function applyFilter(filter) {
+      activeFilter = filter;
+      closeFilterMenu();
+
+      const currentFile = currentDisplayList[currentIndex];
+      currentDisplayList = computeDisplayList();
+
+      if (currentFile && currentDisplayList.includes(currentFile)) {
+        currentIndex = currentDisplayList.indexOf(currentFile);
+      } else {
+        currentIndex = 0;
+      }
+
+      updateFilterUI();
+      updateView();
+      saveCurrentState();
+
+      if (filter === 'All') {
+        showToast(`Showing all ${currentDisplayList.length} photos`);
+      } else {
+        showToast(`Filtered: ${filter} (${currentDisplayList.length} photos)`);
+      }
+    }
+
+    function preloadImages(centerIdx) {
+      for (let i = 1; i <= preloadBuffer; i++) {
+        const nextIdx = centerIdx + i;
+        if (nextIdx < currentDisplayList.length) {
+          const fname = currentDisplayList[nextIdx];
+          if (!preloadedImages.has(fname)) {
+            const img = new Image();
+            img.src = '/photo/' + encodeURIComponent(fname);
+            preloadedImages.set(fname, img);
+          }
+        }
+      }
+    }
+
+    function saveCurrentState() {
+      if (currentDisplayList.length > 0 && currentDisplayList[currentIndex]) {
+        localStorage.setItem('speed_culler_current_file', currentDisplayList[currentIndex]);
+        localStorage.setItem('speed_culler_source_mode', sourceMode);
+        localStorage.setItem('speed_culler_filter', activeFilter);
+      }
+    }
+
+    function updateView() {
+      resetZoom();
+      
+      if (!currentDisplayList.length) {
+        mainImg.style.display = 'none';
+        selectionPill.className = 'selection-pill';
+        if (photoFilename) {
+          photoFilename.textContent = 'No photos';
+          photoFilename.title = '';
+        }
+        statInfo.textContent = '0 / 0';
+        if (btnToggleSelect) {
+          btnToggleSelect.style.opacity = '0.35';
+          btnToggleSelect.style.pointerEvents = 'none';
+        }
+        updateCounts();
+        Object.keys(activeCategories).forEach(key => {
+          const btn = document.getElementById(`btn-cat-${key}`);
+          if (btn) {
+            btn.classList.remove('active');
+            btn.style.background = 'transparent';
+            btn.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+            btn.style.color = '#e5e7eb';
+            btn.style.boxShadow = 'none';
+            btn.style.transform = 'none';
+          }
+        });
+        return;
+      }
+      mainImg.style.display = 'block';
+      if (btnToggleSelect) {
+        btnToggleSelect.style.opacity = '1';
+        btnToggleSelect.style.pointerEvents = 'auto';
+      }
+
+      const currentFile = currentDisplayList[currentIndex];
+      mainImg.src = '/photo/' + encodeURIComponent(currentFile);
+      if (photoFilename) {
+        photoFilename.textContent = currentFile;
+        photoFilename.title = currentFile;
+      }
+      
+      const filterSuffix = (activeFilter !== 'All') ? ` [${activeFilter}]` : '';
+      statInfo.textContent = `${currentIndex + 1} / ${currentDisplayList.length}${filterSuffix}`;
+      updateCounts();
+
+      // Shortlist Selection Status
+      const isSelected = selectedSet.has(currentFile);
+      
+      if (sourceMode === 'master') {
+        selectionPill.className = `selection-pill show ${isSelected ? 'selected' : 'unselected'}`;
+        selectionPill.textContent = isSelected ? '✓ In Shortlist' : '+ Not in Shortlist (Press Space or 1-9)';
+        
+        if (isSelected) {
+          btnToggleSelect.className = 'btn-shortlist is-selected has-tooltip';
+          btnToggleSelect.setAttribute('data-tooltip', 'Remove from Shortlist (Space)');
+          btnToggleSelect.innerHTML = '<span class="btn-action-icon remove">✕</span> <span class="btn-action-text">Remove</span> <kbd class="kbd-pill">Space</kbd>';
+        } else {
+          btnToggleSelect.className = 'btn-shortlist not-selected has-tooltip';
+          btnToggleSelect.setAttribute('data-tooltip', 'Add to Shortlist (Space)');
+          btnToggleSelect.innerHTML = '<span class="btn-action-icon add">+</span> <span class="btn-action-text">Shortlist</span> <kbd class="kbd-pill">Space</kbd>';
+        }
+      } else {
+        selectionPill.className = 'selection-pill';
+        btnToggleSelect.className = 'btn-shortlist is-selected has-tooltip';
+        btnToggleSelect.setAttribute('data-tooltip', 'Remove from Shortlist (Space)');
+        btnToggleSelect.innerHTML = '<span class="btn-action-icon remove">✕</span> <span class="btn-action-text">Remove</span> <kbd class="kbd-pill">Space</kbd>';
+      }
+
+      const currentCat = assignedMap[currentFile];
+      imageWrapper.className = 'image-wrapper';
+
+      Object.entries(activeCategories).forEach(([key, name]) => {
+        const btn = document.getElementById(`btn-cat-${key}`);
+        if (btn) {
+          btn.classList.remove('active');
+          btn.style.background = 'transparent';
+          btn.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          btn.style.color = '#e5e7eb';
+          btn.style.boxShadow = 'none';
+          btn.style.transform = 'none';
+        }
+      });
+
+      if (currentCat) {
+        const found = Object.entries(activeCategories).find(([k, n]) => n.toLowerCase() === currentCat.toLowerCase());
+        if (found) {
+          const [key, name] = found;
+          const colorObj = CAT_COLOR_MAP[key] || { color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.35)' };
+          const btn = document.getElementById(`btn-cat-${key}`);
+          if (btn) {
+            btn.classList.add('active');
+            btn.style.background = colorObj.color;
+            btn.style.borderColor = colorObj.color;
+            btn.style.color = (key === '5' || key === '3' ? '#000' : '#fff');
+            btn.style.boxShadow = `0 6px 20px ${colorObj.bg}, 0 2px 8px rgba(0, 0, 0, 0.5)`;
+            btn.style.transform = 'translateY(-2px) scale(1.04)';
+          }
+          mainImg.style.boxShadow = `inset 0 0 50px ${colorObj.bg}`;
+        } else {
+          mainImg.style.boxShadow = 'none';
+        }
+      } else {
+        mainImg.style.boxShadow = 'none';
+      }
+
+      preloadImages(currentIndex);
+      saveCurrentState();
+    }
+
+    function nextPhoto() {
+      if (currentIndex < currentDisplayList.length - 1) {
+        currentIndex++;
+        updateView();
+      }
+    }
+
+    function prevPhoto() {
+      if (currentIndex > 0) {
+        currentIndex--;
+        updateView();
+      }
+    }
+
+    async function toggleCurrentSelection() {
+      if (!currentDisplayList.length) return;
+      const currentFile = currentDisplayList[currentIndex];
+      const isSelected = selectedSet.has(currentFile);
+
+      if (isSelected) {
+        selectedSet.delete(currentFile);
+        const idxInSel = selectedPhotos.indexOf(currentFile);
+        if (idxInSel !== -1) selectedPhotos.splice(idxInSel, 1);
+        delete assignedMap[currentFile];
+
+        showToast(`Removed from Shortlist`);
+
+        if (sourceMode === 'selected' || activeFilter !== 'All') {
+          currentDisplayList = computeDisplayList();
+          if (currentIndex >= currentDisplayList.length) {
+            currentIndex = Math.max(0, currentDisplayList.length - 1);
+          }
+        }
+        updateView();
+
+        try {
+          await fetch('/api/toggle_selection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: currentFile, select: false })
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      } else {
+        selectedSet.add(currentFile);
+        if (!selectedPhotos.includes(currentFile)) {
+          selectedPhotos.push(currentFile);
+          selectedPhotos.sort();
+        }
+
+        showToast(`✓ Added to Shortlist`);
+        updateView();
+
+        try {
+          await fetch('/api/toggle_selection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: currentFile, select: true })
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    }
+
+    async function assignCurrent(category) {
+      if (!currentDisplayList.length) return;
+      const currentFile = currentDisplayList[currentIndex];
+      const oldCat = assignedMap[currentFile];
+
+      if (oldCat === category) {
+        delete assignedMap[currentFile];
+        showToast(`Removed from ${category}`);
+
+        if (activeFilter === category || activeFilter === 'Uncategorized') {
+          currentDisplayList = computeDisplayList();
+          if (currentIndex >= currentDisplayList.length) {
+            currentIndex = Math.max(0, currentDisplayList.length - 1);
+          }
+        }
+        updateView();
+
+        await fetch('/api/categorize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: currentFile, category: null })
+        });
+      } else {
+        const wasSelected = selectedSet.has(currentFile);
+        if (!wasSelected) {
+          selectedSet.add(currentFile);
+          if (!selectedPhotos.includes(currentFile)) {
+            selectedPhotos.push(currentFile);
+            selectedPhotos.sort();
+          }
+        }
+
+        assignedMap[currentFile] = category;
+
+        if (!wasSelected) {
+          showToast(`✓ Added to Shortlist & Assigned: ${category}`);
+        } else {
+          showToast(`Assigned: ${category}`);
+        }
+
+        if (activeFilter !== 'All' && activeFilter !== 'Selected' && activeFilter !== 'Unselected') {
+          if (activeFilter === oldCat || activeFilter === 'Uncategorized') {
+            currentDisplayList = computeDisplayList();
+            if (currentIndex >= currentDisplayList.length) {
+              currentIndex = Math.max(0, currentDisplayList.length - 1);
+            }
+          }
+        }
+
+        updateView();
+
+        await fetch('/api/categorize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: currentFile, category: category })
+        });
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    document.getElementById('btn-fullscreen').onclick = toggleFullscreen;
+    document.getElementById('btn-open-folder').onclick = () => {
+      fetch('/api/open_dest', { method: 'POST' });
+    };
+
+    let currentGridFilter = 'All';
+    function filterGrid(filter) {
+      currentGridFilter = filter;
+      document.querySelectorAll('.grid-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim() === filter || btn.textContent.startsWith(filter));
+      });
+      renderGrid();
+    }
+
+    function renderGrid() {
+      gridContainer.innerHTML = '';
+      const basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
+      
+      let filtered = basePool;
+      if (currentGridFilter === 'Selected') {
+        filtered = basePool.filter(f => selectedSet.has(f));
+      } else if (currentGridFilter === 'Unselected') {
+        filtered = basePool.filter(f => !selectedSet.has(f));
+      } else if (currentGridFilter === 'Uncategorized') {
+        filtered = basePool.filter(f => !assignedMap[f]);
+      } else if (currentGridFilter !== 'All') {
+        filtered = basePool.filter(f => assignedMap[f] === currentGridFilter);
+      }
+
+      if (filtered.length === 0) {
+        gridContainer.innerHTML = `<div style="color: #6b7280; grid-column: 1/-1; text-align: center; padding: 40px;">No photos match ${currentGridFilter}!</div>`;
+        return;
+      }
+
+      filtered.forEach(fname => {
+        const item = document.createElement('div');
+        const cat = assignedMap[fname];
+        const isSel = selectedSet.has(fname);
+
+        let badgeHtml = '';
+        let borderColor = 'transparent';
+        if (cat) {
+          const found = Object.entries(activeCategories).find(([k, n]) => n.toLowerCase() === cat.toLowerCase());
+          const key = found ? found[0] : '1';
+          const colorObj = CAT_COLOR_MAP[key] || { color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.35)' };
+          borderColor = colorObj.color;
+          badgeHtml = `<div class="badge" style="background:${colorObj.color}; color:${key === '5' ? '#000' : '#fff'};">${cat}</div>`;
+        } else if (sourceMode === 'master' && isSel) {
+          borderColor = '#10b981';
+          badgeHtml = `<div class="badge" style="background:#10b981; color:#fff;">✓ SEL</div>`;
+        }
+
+        item.className = `grid-item`;
+        if (cat || (sourceMode === 'master' && isSel)) {
+          item.style.borderColor = borderColor;
+        }
+        item.innerHTML = `
+          <img src="/photo/${encodeURIComponent(fname)}" loading="lazy" />
+          ${badgeHtml}
+        `;
+        item.onclick = () => {
+          if (currentGridFilter !== 'All' && currentGridFilter !== 'Selected' && currentGridFilter !== 'Unselected') {
+            activeFilter = currentGridFilter;
+          }
+          currentDisplayList = computeDisplayList();
+          currentIndex = currentDisplayList.indexOf(fname);
+          if (currentIndex === -1) currentIndex = 0;
+          updateFilterUI();
+          updateView();
+          closeGrid();
+        };
+        gridContainer.appendChild(item);
+      });
+    }
+
+    function openGrid() {
+      gridView.classList.add('active');
+      filterGrid('All');
+    }
+
+    function closeGrid() {
+      gridView.classList.remove('active');
+    }
+
+    document.getElementById('btn-grid').onclick = openGrid;
+    document.getElementById('btn-close-grid').onclick = closeGrid;
+
+    // Project Management
+    async function loadProjects() {
+      try {
+        const res = await fetch('/api/projects');
+        projectsData = await res.json();
+        renderProjectMenu();
+        renderDiscoveredChips();
+      } catch (err) {
+        console.error('Failed to load projects', err);
+      }
+    }
+
+    function renderProjectMenu() {
+      if (!projectsData) return;
+      const triggerLabel = document.getElementById('project-name-label');
+      const triggerBtn = document.getElementById('project-trigger');
+      const listContainer = document.getElementById('project-list-items');
+      const activeProj = (projectsData.projects || []).find(p => p.id === projectsData.active_project_id);
+      
+      if (activeProj) {
+        if (triggerLabel) {
+          triggerLabel.textContent = activeProj.name;
+          triggerLabel.title = activeProj.name;
+        }
+        if (triggerBtn) {
+          triggerBtn.setAttribute('data-tooltip', `Project: ${activeProj.name}`);
+          triggerBtn.title = `Project: ${activeProj.name}`;
+        }
+      }
+
+      if (listContainer) {
+        listContainer.innerHTML = '';
+        (projectsData.projects || []).forEach(proj => {
+          const btn = document.createElement('button');
+          const isActive = proj.id === projectsData.active_project_id;
+          btn.className = `project-opt ${isActive ? 'active' : ''}`;
+          btn.innerHTML = `
+            <div class="project-opt-info">
+              <div class="project-opt-name">${proj.name}</div>
+              <div class="project-opt-path">${proj.source_dir || ''}</div>
+            </div>
+            ${isActive ? '<span class="proj-check">✓</span>' : ''}
+          `;
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            switchProject(proj.id);
+          };
+          listContainer.appendChild(btn);
+        });
+      }
+    }
+
+    function toggleProjectMenu() {
+      document.getElementById('project-dropdown').classList.toggle('show');
+    }
+
+    function closeProjectMenu() {
+      const dd = document.getElementById('project-dropdown');
+      if (dd) dd.classList.remove('show');
+    }
+
+    async function switchProject(projectId) {
+      closeProjectMenu();
+      if (projectsData && projectId === projectsData.active_project_id) return;
+      showToast('Switching project...');
+      try {
+        const res = await fetch('/api/projects/switch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: projectId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          localStorage.removeItem('speed_culler_current_file');
+          activeFilter = 'All';
+          await loadProjects();
+          await loadPhotos();
+          showToast(`Switched to "${data.active_project.name}"`);
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to switch project');
+      }
+    }
+
+    const PRESETS = {
+      hackathon: ['General', 'Quiz', 'Judges', 'Awards', 'Mentors', 'Other', 'Prizes'],
+      wedding: ['Couple', 'Family', 'Guests', 'Rituals', 'Candid', 'Stage'],
+      quick: ['Selects', 'Maybe', 'Review']
+    };
+
+    let newProjCategories = [...PRESETS.hackathon];
+
+    function renderNewProjCatChips() {
+      const container = document.getElementById('new-proj-cat-chips');
+      if (!container) return;
+      container.innerHTML = '';
+      newProjCategories.forEach((cat, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'edit-cat-chip';
+        chip.innerHTML = `<kbd>${idx + 1}</kbd> <span>${cat}</span> <button type="button" class="btn-del-chip" onclick="removeNewProjCatChip(${idx})" title="Remove">✕</button>`;
+        container.appendChild(chip);
+      });
+    }
+
+    function addNewProjCatChip() {
+      const input = document.getElementById('input-new-cat-name');
+      const val = input.value.trim();
+      if (!val) return;
+      if (!newProjCategories.includes(val)) {
+        newProjCategories.push(val);
+        renderNewProjCatChips();
+      }
+      input.value = '';
+    }
+
+    function removeNewProjCatChip(idx) {
+      if (newProjCategories.length <= 1) {
+        showToast('At least 1 category is required');
+        return;
+      }
+      newProjCategories.splice(idx, 1);
+      renderNewProjCatChips();
+    }
+
+    function applyNewProjPreset(type) {
+      if (PRESETS[type]) {
+        newProjCategories = [...PRESETS[type]];
+        renderNewProjCatChips();
+      }
+    }
+
+    // Manage Categories Modal for Active Project
+    const modalCategories = document.getElementById('modal-categories');
+    let manageCategoriesList = [];
+
+    function openManageCategoriesModal() {
+      closeProjectMenu();
+      if (!projectsData) return;
+      const activeProj = (projectsData.projects || []).find(p => p.id === projectsData.active_project_id);
+      const nameEl = document.getElementById('manage-cats-project-name');
+      if (nameEl) nameEl.textContent = activeProj ? activeProj.name : 'Current Project';
+
+      manageCategoriesList = Object.values(activeCategories);
+      renderManageCatChips();
+      modalCategories.style.display = 'flex';
+      setTimeout(() => {
+        const inp = document.getElementById('input-manage-cat-name');
+        if (inp) inp.focus();
+      }, 100);
+    }
+
+    function closeManageCategoriesModal() {
+      modalCategories.style.display = 'none';
+    }
+
+    function handleCatModalOverlayClick(e) {
+      if (e.target === modalCategories) {
+        closeManageCategoriesModal();
+      }
+    }
+
+    function renderManageCatChips() {
+      const container = document.getElementById('manage-cat-chips');
+      if (!container) return;
+      container.innerHTML = '';
+      manageCategoriesList.forEach((cat, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'edit-cat-chip';
+        chip.innerHTML = `<kbd>${idx + 1}</kbd> <span>${cat}</span> <button type="button" class="btn-del-chip" onclick="removeManageCatChip(${idx})" title="Remove">✕</button>`;
+        container.appendChild(chip);
+      });
+    }
+
+    function addManageCatChip() {
+      const input = document.getElementById('input-manage-cat-name');
+      const val = input.value.trim();
+      if (!val) return;
+      if (!manageCategoriesList.includes(val)) {
+        manageCategoriesList.push(val);
+        renderManageCatChips();
+      }
+      input.value = '';
+    }
+
+    function removeManageCatChip(idx) {
+      if (manageCategoriesList.length <= 1) {
+        showToast('At least 1 category is required');
+        return;
+      }
+      manageCategoriesList.splice(idx, 1);
+      renderManageCatChips();
+    }
+
+    function applyManagePreset(type) {
+      if (PRESETS[type]) {
+        manageCategoriesList = [...PRESETS[type]];
+        renderManageCatChips();
+      }
+    }
+
+    async function saveActiveProjectCategories() {
+      if (!manageCategoriesList.length) {
+        alert('Please keep at least 1 category.');
+        return;
+      }
+
+      const categoriesDict = {};
+      manageCategoriesList.forEach((c, idx) => {
+        categoriesDict[String(idx + 1)] = c;
+      });
+
+      const btn = document.getElementById('btn-save-categories');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      try {
+        const res = await fetch('/api/projects/update_categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            project_id: projectsData.active_project_id,
+            categories: categoriesDict
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          closeManageCategoriesModal();
+          await loadProjects();
+          await loadPhotos();
+          showToast('Categories updated successfully!');
+        } else {
+          alert(result.error || 'Failed to update categories');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Failed to connect to server');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Categories';
+      }
+    }
+
+    function openNewProjectModal() {
+      closeProjectMenu();
+      modalProject.style.display = 'flex';
+      document.getElementById('input-proj-name').value = '';
+      document.getElementById('input-proj-source').value = '';
+      newProjCategories = [...PRESETS.hackathon];
+      renderNewProjCatChips();
+      updatePathPreview();
+      renderDiscoveredChips();
+      setTimeout(() => {
+        document.getElementById('input-proj-name').focus();
+      }, 100);
+    }
+
+    function closeNewProjectModal() {
+      modalProject.style.display = 'none';
+    }
+
+    function handleModalOverlayClick(e) {
+      if (e.target === modalProject) {
+        closeNewProjectModal();
+      }
+    }
+
+    function renderDiscoveredChips() {
+      const box = document.getElementById('discovered-tags-box');
+      const chipsList = document.getElementById('discovered-chips');
+      if (!projectsData || !projectsData.discovered_folders || !projectsData.discovered_folders.length) {
+        if (box) box.style.display = 'none';
+        return;
+      }
+      if (box) box.style.display = 'flex';
+      if (chipsList) {
+        chipsList.innerHTML = '';
+        projectsData.discovered_folders.forEach(item => {
+          const chip = document.createElement('div');
+          chip.className = 'tag-chip';
+          chip.textContent = `${item.name} (${item.photo_count})`;
+          chip.onclick = () => {
+            document.getElementById('input-proj-name').value = item.name;
+            document.getElementById('input-proj-source').value = item.path;
+            updatePathPreview();
+          };
+          chipsList.appendChild(chip);
+        });
+      }
+    }
+
+    function onFolderPathInput() {
+      const sourceVal = document.getElementById('input-proj-source').value.trim();
+      const nameInput = document.getElementById('input-proj-name');
+      if (sourceVal && !nameInput.value.trim()) {
+        const parts = sourceVal.replace(/\/+$/, '').split('/');
+        if (parts.length > 0) {
+          nameInput.value = parts[parts.length - 1];
+        }
+      }
+      updatePathPreview();
+    }
+
+    function updatePathPreview() {
+      const name = document.getElementById('input-proj-name').value.trim() || '[Project_Name]';
+      const root = (projectsData && projectsData.selected_root) || '/Volumes/C/Selected';
+      document.getElementById('preview-output-path').textContent = `${root}/${name}`;
+    }
+
+    async function submitNewProject() {
+      const name = document.getElementById('input-proj-name').value.trim();
+      const sourceDir = document.getElementById('input-proj-source').value.trim();
+
+      if (!name) {
+        alert('Please enter a project name.');
+        return;
+      }
+      if (!sourceDir) {
+        alert('Please enter or select a source photos folder.');
+        return;
+      }
+      if (!newProjCategories.length) {
+        alert('Please add at least one category.');
+        return;
+      }
+
+      const categories = {};
+      newProjCategories.forEach((c, idx) => {
+        categories[String(idx + 1)] = c;
+      });
+
+      const btn = document.getElementById('btn-create-project');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+
+      try {
+        const res = await fetch('/api/projects/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: name,
+            source_dir: sourceDir,
+            categories: categories
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          closeNewProjectModal();
+          localStorage.removeItem('speed_culler_current_file');
+          activeFilter = 'All';
+          sourceMode = 'master'; // Start in master mode for new project
+          await loadProjects();
+          await loadPhotos();
+          showToast(`Created & opened "${name}"!`);
+        } else {
+          alert(result.error || 'Failed to create project.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Failed to connect to server.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create & Open Project';
+      }
+    }
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        if (e.key === 'Escape') {
+          closeNewProjectModal();
+          closeManageCategoriesModal();
+        }
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        document.body.classList.toggle('show-top-bar');
+        return;
+      }
+
+      if (modalProject && modalProject.style.display === 'flex') {
+        if (e.key === 'Escape') {
+          closeNewProjectModal();
+        }
+        return;
+      }
+
+      if (modalCategories && modalCategories.style.display === 'flex') {
+        if (e.key === 'Escape') {
+          closeManageCategoriesModal();
+        }
+        return;
+      }
+
+      if (gridView.classList.contains('active')) {
+        if (e.key === 'Escape' || e.key === 'g' || e.key === 'G') {
+          closeGrid();
+        }
+        return;
+      }
+
+      if (e.code === 'Space' || e.key === ' ') {
+        e.preventDefault();
+        toggleCurrentSelection();
+        return;
+      }
+
+      if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        switchSource(sourceMode === 'selected' ? 'master' : 'selected');
+        return;
+      }
+
+      if (activeCategories[e.key]) {
+        e.preventDefault();
+        assignCurrent(activeCategories[e.key]);
+        return;
+      }
+
+      if (e.key === '0' || e.key === 'Backspace') {
+        e.preventDefault();
+        if (currentDisplayList.length > 0) {
+          const currentFile = currentDisplayList[currentIndex];
+          if (assignedMap[currentFile]) {
+            assignCurrent(assignedMap[currentFile]);
+          }
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        nextPhoto();
+      } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        prevPhoto();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        if (filterDropdown.classList.contains('show')) {
+          closeFilterMenu();
+        } else if (document.getElementById('project-dropdown').classList.contains('show')) {
+          closeProjectMenu();
+        } else if (scale > 1.0) {
+          resetZoom();
+        } else if (activeFilter !== 'All') {
+          applyFilter('All');
+        }
+      } else if (e.key === 'g' || e.key === 'G') {
+        e.preventDefault();
+        openGrid();
+      } else if (e.key === 'o' || e.key === 'O') {
+        e.preventDefault();
+        fetch('/api/open_dest', { method: 'POST' });
+      }
+    });
+
+    window.addEventListener('click', (e) => {
+      if (!e.target.closest('.filter-wrapper')) {
+        closeFilterMenu();
+      }
+      if (!e.target.closest('.project-wrapper')) {
+        closeProjectMenu();
+      }
+    });
+
+    async function loadPhotos() {
+      try {
+        const res = await fetch('/api/photos');
+        const data = await res.json();
+        
+        if (data.drive_connected === false) {
+          showDisconnectedView(data);
+          startDriveReconnectPolling();
+          return;
+        }
+
+        if (isDriveDisconnected) {
+          hideDisconnectedView();
+          stopDriveReconnectPolling();
+          showToast('✓ External drive reconnected! Restored all photos.');
+        }
+
+        activeCategories = data.categories || {};
+        selectedPhotos = data.selected_photos || data.photos || [];
+        masterPhotos = data.master_photos || [];
+        selectedSet = new Set(selectedPhotos);
+        assignedMap = data.assigned || {};
+
+        renderCategoryPills();
+        renderFilterDropdown();
+        renderGridTabs();
+
+        const savedSource = localStorage.getItem('speed_culler_source_mode');
+        if (savedSource === 'master' || savedSource === 'selected') {
+          sourceMode = savedSource;
+        }
+
+        const savedFilter = localStorage.getItem('speed_culler_filter');
+        if (savedFilter) {
+          activeFilter = savedFilter;
+        }
+
+        btnSrcSelected.classList.toggle('active', sourceMode === 'selected');
+        btnSrcMaster.classList.toggle('active', sourceMode === 'master');
+        document.querySelectorAll('.master-only').forEach(el => {
+          el.style.display = (sourceMode === 'master') ? 'block' : 'none';
+        });
+
+        currentDisplayList = computeDisplayList();
+        updateCounts();
+        updateFilterUI();
+
+        if (currentDisplayList.length > 0) {
+          const savedFile = localStorage.getItem('speed_culler_current_file');
+          if (savedFile && currentDisplayList.includes(savedFile)) {
+            currentIndex = currentDisplayList.indexOf(savedFile);
+          } else {
+            currentIndex = 0;
+          }
+
+          updateView();
+          preloadImages(currentIndex);
+        } else {
+          updateView();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function init() {
+      await loadProjects();
+      await loadPhotos();
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Speed Culler requires Python 3.8+
+# No third-party pip dependencies required!
+# Uses Python Standard Library:
+#   - http.server (ThreadingHTTPServer, SimpleHTTPRequestHandler)
+#   - json
+#   - os
+#   - shutil
+#   - urllib.parse
+#   - subprocess
+#   - re

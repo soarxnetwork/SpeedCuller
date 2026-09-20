@@ -1,0 +1,36 @@
+{
+  "active_project_id": "microsoft_visit",
+  "selected_root": "/Volumes/C/Selected",
+  "projects": {
+    "microsoft_visit": {
+      "id": "microsoft_visit",
+      "name": "Microsoft Visit - SVIET Impact AI Ideathon",
+      "source_dir": "/Volumes/C/Microsoft Visit - SVIET Impact AI Ideathon",
+      "output_dir": "/Volumes/C/Selected/Microsoft Visit - SVIET Impact AI Ideathon",
+      "categories": {
+        "1": "General",
+        "2": "Quiz",
+        "3": "Judges",
+        "4": "Awards",
+        "5": "Mentors",
+        "6": "Other",
+        "7": "Prizes"
+      }
+    },
+    "ai_champs_hack_25": {
+      "id": "ai_champs_hack_25",
+      "name": "ai champs hack 25",
+      "source_dir": "/Volumes/C/ai champs hack 25",
+      "output_dir": "/Volumes/C/Selected/ai champs hack 25",
+      "categories": {
+        "1": "General",
+        "2": "Quiz",
+        "3": "Judges",
+        "4": "Awards",
+        "5": "Mentors",
+        "6": "Other",
+        "7": "Prizes"
+      }
+    }
+  }
+}
