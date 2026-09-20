@@ -8,6 +8,26 @@ An ultra-fast, zero-lag tool designed for photographers, social media managers, 
 
 ---
 
+## 💡 Why SpeedCuller? (The Problem with Existing Tools)
+
+If you've ever covered a hackathon, conference, or photo shoot and had to cull **1,000+ raw 24MP DSLR photos** from an external SSD for social media, you know the frustration:
+
+| Tool | The Limitation |
+| :--- | :--- |
+| **Adobe Lightroom / Capture One** | Heavy bloatware. Importing 1,000+ raw files and building previews takes 20–30 minutes before you can start. Expensive subscription. Doesn't physically sort photos into disk folders without complex export presets. |
+| **Photo Mechanic** | The industry gold standard for sports culling, but costs **$149+**, has a steep 90s enterprise interface, and lacks a zero-friction web UI tailored for multi-post social media campaigns. |
+| **DigiKam / Darktable / FastStone** | Rely purely on metadata/XMP tags (star ratings). They don't physically organize your files into structured subfolders on disk upon a single keystroke. |
+| **Mac Finder / Preview** | Lags and stutters when paging through 1,000+ high-res photos on external drives. No single-key categorization, no dual-mode (Master vs Shortlist), and no instant 2.5x cursor-centered face zoom. |
+| **Immich / Photoprism** | Incredible self-hosted libraries, but require full Docker, PostgreSQL, and Redis setups just to cull an event sprint. |
+
+### How SpeedCuller is Different:
+1. **Physical File Organization on Disk**: Pressing `1` doesn't just add a metadata tag; it physically copies the photo into `/Volumes/C/Selected/<Event>/Categories/1_General/` in milliseconds. Ready to drag directly into Canva, Figma, or Instagram.
+2. **Zero-Lag Image Preloading**: Preloads the next 5 photos into memory so swiping with `→` feels instant (120Hz smooth) even over external USB drives.
+3. **Double-Click 2.5x Face Focus Zoom**: Photographers need to check if eyes and faces in group shots are sharp. Double-clicking instantly zooms 2.5x right where your cursor is placed.
+4. **Zero Dependencies**: Pure Python 3 standard library. No `pip install`, no Docker, no databases. Runs with a single command: `./start.sh`.
+
+---
+
 ## 🚀 Quick Start (Zero Setup Required)
 
 No external libraries or `pip install` commands needed. Speed Culler runs on pure Python 3 standard library.
