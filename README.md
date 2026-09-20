@@ -1,6 +1,10 @@
 # ⚡ Speed Culler – High-Speed Photo Culler & Post Categorizer
 
-An ultra-fast, zero-lag pair-programming tool designed for photographers, social media managers, and event organizers to quickly cull, shortlist, and categorize thousands of high-resolution event photos in seconds.
+An ultra-fast, zero-lag tool designed for photographers, social media managers, and event organizers to quickly cull, shortlist, and categorize thousands of high-resolution event photos in seconds.
+
+![Speed Culler Demo](demo.gif)
+
+*Watch the high-resolution [MP4 Demo Video](demo.mp4).*
 
 ---
 
