@@ -1687,11 +1687,11 @@
         <div class="disconnected-meta-grid">
           <div class="meta-item">
             <span class="meta-label">Expected Volume</span>
-            <span class="meta-val" id="disc-vol-path">/Volumes/C</span>
+            <span class="meta-val" id="disc-vol-path">External Drive / Folder</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">Active Project</span>
-            <span class="meta-val" id="disc-proj-name">Microsoft Visit - SVIET Impact AI Ideathon</span>
+            <span class="meta-val" id="disc-proj-name">Current Project</span>
           </div>
         </div>
 
@@ -1880,16 +1880,16 @@
         </div>
         <div class="form-group">
           <label>Source Photos Folder Path</label>
-          <input type="text" id="input-proj-source" placeholder="/Volumes/C/5th hack photos" oninput="onFolderPathInput()">
+          <input type="text" id="input-proj-source" placeholder="/path/to/photos (or D:\Photos)" oninput="onFolderPathInput()">
           
           <div class="discovered-tags" id="discovered-tags-box" style="display:none;">
-            <span class="tags-label">Detected Folders on /Volumes/C:</span>
+            <span class="tags-label">Detected Photo Folders:</span>
             <div class="tags-list" id="discovered-chips"></div>
           </div>
         </div>
         <div class="form-group">
-          <label>Selected Output Directory (Automatic)</label>
-          <div class="path-preview" id="preview-output-path">/Volumes/C/Selected/...</div>
+          <label>Selected Output Directory (Inside Source Folder)</label>
+          <div class="path-preview" id="preview-output-path">&lt;source_folder&gt;/Selected</div>
         </div>
         <div class="form-group">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2px;">
@@ -2022,7 +2022,7 @@
       const imgWrap = document.getElementById('image-wrapper');
       if (imgWrap) imgWrap.style.display = 'none';
 
-      const volPath = data.volume_path || (data.active_project && data.active_project.source_dir) || '/Volumes/C';
+      const volPath = data.volume_path || (data.active_project && data.active_project.source_dir) || 'Drive / Folder';
       const projName = (data.active_project && data.active_project.name) || 'Current Project';
       
       const elVol = document.getElementById('disc-vol-path');
@@ -2103,7 +2103,7 @@
           await loadPhotos();
           showToast('✓ External drive connected!');
         } else {
-          showToast('⚠️ Drive still not detected. Please plug in /Volumes/C');
+          showToast('⚠️ Drive still not detected. Please reconnect the drive/folder.');
         }
       } catch (e) {
         showToast('⚠️ Connection check failed.');
@@ -3400,9 +3400,13 @@
     }
 
     function updatePathPreview() {
-      const name = document.getElementById('input-proj-name').value.trim() || '[Project_Name]';
-      const root = (projectsData && projectsData.selected_root) || '/Volumes/C/Selected';
-      document.getElementById('preview-output-path').textContent = `${root}/${name}`;
+      const src = document.getElementById('input-proj-source').value.trim();
+      const preview = document.getElementById('preview-output-path');
+      if (src) {
+        preview.textContent = `${src.replace(/\/+$/, '')}/Selected`;
+      } else {
+        preview.textContent = '<source_folder>/Selected';
+      }
     }
 
     async function submitNewProject() {

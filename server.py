@@ -28,17 +28,8 @@ def slugify(text):
 def load_projects_data():
     if not os.path.exists(PROJECTS_FILE):
         data = {
-            "active_project_id": "microsoft_visit",
-            "selected_root": "/Volumes/C/Selected",
-            "projects": {
-                "microsoft_visit": {
-                    "id": "microsoft_visit",
-                    "name": "Microsoft Visit - SVIET Impact AI Ideathon",
-                    "source_dir": "/Volumes/C/Microsoft Visit - SVIET Impact AI Ideathon",
-                    "output_dir": "/Volumes/C/Selected/Microsoft Visit - SVIET Impact AI Ideathon",
-                    "categories": DEFAULT_CATEGORIES
-                }
-            }
+            "active_project_id": "",
+            "projects": {}
         }
         with open(PROJECTS_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
@@ -96,30 +87,66 @@ def ensure_project_structure(project):
         print(f"Error ensuring project structure: {e}")
         return False
 
-def discover_candidate_folders(root_dir="/Volumes/C"):
+def discover_candidate_folders(root_dir=None):
     candidates = []
-    if not os.path.exists(root_dir):
-        return candidates
+    roots_to_scan = []
     
+    if root_dir and os.path.exists(root_dir):
+        roots_to_scan.append(root_dir)
+    else:
+        # Check parent folder of active project's source dir
+        try:
+            data = load_projects_data()
+            active = get_active_project(data)
+            if active and "source_dir" in active and os.path.exists(active["source_dir"]):
+                parent = os.path.dirname(active["source_dir"])
+                if parent and os.path.exists(parent):
+                    roots_to_scan.append(parent)
+        except Exception:
+            pass
+
+        # Scan mounted volumes on macOS (/Volumes)
+        if os.path.exists('/Volumes'):
+            try:
+                for v in os.listdir('/Volumes'):
+                    vp = os.path.join('/Volumes', v)
+                    if os.path.isdir(vp) and not v.startswith('.') and vp not in roots_to_scan:
+                        roots_to_scan.append(vp)
+            except Exception:
+                pass
+
+        # User's Pictures directory fallback
+        user_pics = os.path.expanduser('~/Pictures')
+        if os.path.exists(user_pics) and user_pics not in roots_to_scan:
+            roots_to_scan.append(user_pics)
+
     ignore_names = {'$recycle.bin', '.spotlight-v100', '.temporaryitems', '.trashes', '.fseventsd', 'system volume information', 'selected', 'android', 'all downloads', 'misc'}
-    try:
-        for entry in os.listdir(root_dir):
-            if entry.startswith('.') or entry.lower() in ignore_names:
-                continue
-            full_p = os.path.join(root_dir, entry)
-            if os.path.isdir(full_p):
-                try:
-                    files = [f for f in os.listdir(full_p) if not f.startswith('.') and os.path.splitext(f)[1].lower() in VALID_EXTS]
-                    if len(files) > 0:
-                        candidates.append({
-                            "name": entry,
-                            "path": full_p,
-                            "photo_count": len(files)
-                        })
-                except Exception:
-                    pass
-    except Exception:
-        pass
+    seen_paths = set()
+
+    for r_dir in roots_to_scan:
+        if not os.path.exists(r_dir):
+            continue
+        try:
+            for entry in os.listdir(r_dir):
+                if entry.startswith('.') or entry.lower() in ignore_names:
+                    continue
+                full_p = os.path.join(r_dir, entry)
+                if full_p in seen_paths:
+                    continue
+                if os.path.isdir(full_p):
+                    try:
+                        files = [f for f in os.listdir(full_p) if not f.startswith('.') and os.path.splitext(f)[1].lower() in VALID_EXTS]
+                        if len(files) > 0:
+                            candidates.append({
+                                "name": entry,
+                                "path": full_p,
+                                "photo_count": len(files)
+                            })
+                            seen_paths.add(full_p)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
     return sorted(candidates, key=lambda x: x["name"])
 
 # Initialize default active project structure on startup
@@ -184,7 +211,6 @@ class SpeedCullerHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({
                 "active_project_id": data.get("active_project_id"),
-                "selected_root": data.get("selected_root", "/Volumes/C/Selected"),
                 "projects": projects_list,
                 "discovered_folders": candidates
             }).encode('utf-8'))
@@ -385,8 +411,8 @@ class SpeedCullerHandler(SimpleHTTPRequestHandler):
 
             data = load_projects_data()
             project_id = slugify(name)
-            selected_root = data.get("selected_root", "/Volumes/C/Selected")
-            output_dir = payload.get("output_dir") or os.path.join(selected_root, name)
+            default_out = os.path.join(source_dir, "Selected")
+            output_dir = payload.get("output_dir") or default_out
 
             project = {
                 "id": project_id,

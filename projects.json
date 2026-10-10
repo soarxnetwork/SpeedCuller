@@ -1,6 +1,5 @@
 {
   "active_project_id": "vivo_t2_pro",
-  "selected_root": "/Volumes/C/Selected",
   "projects": {
     "microsoft_visit": {
       "id": "microsoft_visit",
@@ -36,7 +35,7 @@
       "id": "vivo_t2_pro",
       "name": "Vivo T2 Pro - Camera",
       "source_dir": "/Volumes/A/Phone Backup - T2 Pro/Camera",
-      "output_dir": "/Volumes/C/Selected/Vivo T2 Pro - Camera",
+      "output_dir": "/Volumes/A/Phone Backup - T2 Pro/Camera/Selected",
       "categories": {
         "1": "General",
         "2": "Quiz",

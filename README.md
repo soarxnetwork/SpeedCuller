@@ -21,7 +21,7 @@ If you've ever covered a hackathon, conference, or photo shoot and had to cull *
 | **Immich / Photoprism** | Incredible self-hosted libraries, but require full Docker, PostgreSQL, and Redis setups just to cull an event sprint. |
 
 ### How SpeedCuller is Different:
-1. **Physical File Organization on Disk**: Pressing `1` doesn't just add a metadata tag; it physically copies the photo into `/Volumes/C/Selected/<Event>/Categories/1_General/` in milliseconds. Ready to drag directly into Canva, Figma, or Instagram.
+1. **Physical File Organization on Disk**: Pressing `1` doesn't just add a metadata tag; it physically copies the photo into `<Source_Folder>/Selected/Categories/1_General/` in milliseconds. Ready to drag directly into Canva, Figma, or Instagram.
 2. **Zero-Lag Image Preloading**: Preloads the next 5 photos into memory so swiping with `→` feels instant (120Hz smooth) even over external USB drives.
 3. **Double-Click 2.5x Face Focus Zoom**: Photographers need to check if eyes and faces in group shots are sharp. Double-clicking instantly zooms 2.5x right where your cursor is placed.
 4. **Zero Dependencies**: Pure Python 3 standard library. No `pip install`, no Docker, no databases. Runs with a single command: `./start.sh`.
@@ -49,11 +49,11 @@ Visit **[http://127.0.0.1:5500](http://127.0.0.1:5500)** in Google Chrome, Micro
 
 ## 📂 Standardized Folder Hierarchy
 
-Speed Culler keeps all original camera files completely untouched and organizes your shortlists automatically under:
+Speed Culler keeps all original camera files completely untouched and organizes your shortlists automatically right inside your photo folder:
 
 ```text
-/Volumes/C/Selected/
-└── [Project_Name]/   (e.g., "Microsoft Visit - SVIET Impact AI Ideathon")
+[Your_Photos_Folder]/
+└── Selected/
       ├── Overall_Selected/   <-- All shortlisted photos (one single clean folder)
       ├── Categories/         <-- Subfolders for each category:
       │     ├── 1_General/
@@ -83,7 +83,7 @@ Speed Culler keeps all original camera files completely untouched and organizes 
 | **Click & Drag** | Pan around zoomed photo |
 | **`G`** | **Grid View** (Full-screen thumbnail matrix with category filters) |
 | **`F`** | Fullscreen toggle |
-| **`O`** | **Open Folder** in macOS Finder (`/Volumes/C/Selected/<Project_Name>`) |
+| **`O`** | **Open Folder** in file explorer (`<Selected_Folder>`) |
 | **`Esc`** | Clear active filter / Reset zoom / Close modals |
 
 ---
@@ -93,7 +93,7 @@ Speed Culler keeps all original camera files completely untouched and organizes 
 ### 1. Project Switcher (Top-Left Bar)
 - Switch between different events/photo sessions with a single click.
 - Click **`+ Add Folder / Project...`** to add any photo directory.
-- Auto-detects camera folders on `/Volumes/C` for 1-click project setup.
+- Auto-detects photo folders across connected drives for 1-click project setup.
 
 ### 2. Custom Categories ("🏷️ Categories" Button)
 - Define custom categories for any project (e.g. Hackathon, Wedding, Corporate, Portrait).
