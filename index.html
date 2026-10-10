@@ -102,14 +102,14 @@
     /* Top Studio Header */
     .header-bar {
       position: absolute;
-      top: 14px;
-      left: 18px;
-      right: 18px;
+      top: 12px;
+      left: 14px;
+      right: 14px;
       height: 44px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
+      gap: 10px;
       z-index: 25;
       pointer-events: auto;
     }
@@ -117,26 +117,26 @@
     .header-left {
       display: flex;
       align-items: center;
-      gap: 8px;
-      flex: 1 1 0;
-      min-width: 0;
+      gap: 6px;
+      flex-shrink: 0;
       justify-content: flex-start;
     }
 
     .header-center {
-      flex: 0 0 auto;
+      flex: 1 1 auto;
+      min-width: 0;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 0 4px;
       pointer-events: auto;
     }
 
     .header-right {
       display: flex;
       align-items: center;
-      gap: 8px;
-      flex: 1 1 0;
-      min-width: 0;
+      gap: 6px;
+      flex-shrink: 0;
       justify-content: flex-end;
     }
 
@@ -144,30 +144,46 @@
     .photo-info-badge {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       background: rgba(13, 16, 24, 0.88);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 5px 14px;
+      padding: 5px 12px;
       border-radius: 20px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
       pointer-events: auto;
+      max-width: 100%;
+      min-width: 0;
     }
 
     .photo-filename {
       font-size: 12px;
       font-weight: 600;
       color: #f3f4f6;
-      max-width: 200px;
+      max-width: 170px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      min-width: 0;
+    }
+
+    .photo-date-chip {
+      font-size: 10px;
+      font-weight: 600;
+      color: #93c5fd;
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .photo-info-badge .divider {
       color: rgba(255, 255, 255, 0.2);
       font-size: 10px;
+      flex-shrink: 0;
     }
 
     .photo-index {
@@ -177,6 +193,16 @@
       font-variant-numeric: tabular-nums;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 1120px) {
+      .photo-date-chip {
+        display: none !important;
+      }
+      .photo-filename {
+        max-width: 120px;
+      }
     }
 
     /* Source Segmented Control (Left) */
@@ -187,8 +213,8 @@
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 3px;
-      border-radius: 12px;
+      padding: 2px;
+      border-radius: 10px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
       flex-shrink: 0;
     }
@@ -199,12 +225,12 @@
       color: #9ca3af;
       font-size: 11px;
       font-weight: 600;
-      padding: 5px 11px;
-      border-radius: 8px;
+      padding: 4px 8px;
+      border-radius: 7px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
       white-space: nowrap !important;
       transition: all 0.15s ease;
     }
@@ -515,13 +541,13 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
       color: #f3f4f6;
       font-size: 11px;
-      font-weight: 700;
-      padding: 6px 12px;
-      border-radius: 12px;
+      font-weight: 600;
+      padding: 5px 8px;
+      border-radius: 10px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       white-space: nowrap !important;
       flex-shrink: 0;
       box-shadow: 0 8px 24px rgba(0,0,0,0.6);
@@ -755,17 +781,17 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
       color: #f3f4f6;
       font-size: 11px;
-      font-weight: 700;
-      padding: 6px 12px;
-      border-radius: 12px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 10px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 7px;
+      gap: 5px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.6);
       transition: all 0.15s ease;
-      max-width: 170px;
-      flex-shrink: 1;
+      max-width: 140px;
+      flex-shrink: 0;
     }
 
     .project-trigger:hover {
@@ -1727,7 +1753,7 @@
         <!-- Filter Dropdown -->
         <div class="filter-wrapper">
           <button class="filter-trigger" id="filter-trigger" onclick="toggleFilterMenu()">
-            <span id="filter-label">Filter: All</span> ▾
+            <span id="filter-label">Cat: All</span> ▾
             <span class="btn-clear-inline" id="btn-clear-inline" onclick="event.stopPropagation(); applyFilter('All');" title="Clear filter (Esc)" style="display:none;">✕</span>
           </button>
           <div class="filter-dropdown" id="filter-dropdown">
@@ -1744,7 +1770,7 @@
         <!-- Date Filter Dropdown -->
         <div class="filter-wrapper" id="date-filter-wrapper">
           <button class="filter-trigger" id="date-filter-trigger" onclick="toggleDateMenu()">
-            <span id="date-filter-label">📅 Date: All</span> ▾
+            <span id="date-filter-label">📅 All</span> ▾
             <span class="btn-clear-inline" id="btn-clear-date-inline" onclick="event.stopPropagation(); applyDateFilter('All');" title="Clear date filter" style="display:none;">✕</span>
           </button>
           <div class="filter-dropdown" id="date-dropdown" style="max-height: 480px; overflow-y: auto; width: 280px; padding: 6px; box-sizing: border-box;">
@@ -1769,6 +1795,7 @@
       <div class="header-center">
         <div class="photo-info-badge">
           <span class="photo-filename" id="photo-filename">Loading...</span>
+          <span class="photo-date-chip" id="photo-date-chip" style="display:none;"></span>
           <span class="divider">•</span>
           <span class="photo-index" id="stat-info">0 / 0</span>
         </div>
@@ -2323,15 +2350,15 @@
 
       if (filterLabel) {
         if (activeFilter === 'All') {
-          filterLabel.innerHTML = `Filter: All (${currentDisplayList.length})`;
+          filterLabel.innerHTML = `Cat: All (${currentDisplayList.length})`;
           filterTrigger.classList.remove('is-active');
           if (btnClearInline) btnClearInline.style.display = 'none';
         } else if (activeFilter === 'Uncategorized') {
-          filterLabel.innerHTML = `<span class="filter-text-muted">Filter:</span> <span class="filter-text-val">Uncategorized (${currentDisplayList.length})</span>`;
+          filterLabel.innerHTML = `<span class="filter-text-muted">Cat:</span> <span class="filter-text-val">Uncat (${currentDisplayList.length})</span>`;
           filterTrigger.classList.add('is-active');
           if (btnClearInline) btnClearInline.style.display = 'inline-flex';
         } else {
-          filterLabel.innerHTML = `<span class="filter-text-muted">Filter:</span> <span class="filter-text-val">${activeFilter} (${currentDisplayList.length})</span>`;
+          filterLabel.innerHTML = `<span class="filter-text-muted">Cat:</span> <span class="filter-text-val">${activeFilter} (${currentDisplayList.length})</span>`;
           filterTrigger.classList.add('is-active');
           if (btnClearInline) btnClearInline.style.display = 'inline-flex';
         }
@@ -2639,14 +2666,11 @@
       if (optAll) optAll.classList.toggle('active', activeDateFilter === 'All');
 
       if (activeDateFilter === 'All') {
-        label.innerHTML = `📅 Date: All`;
+        label.innerHTML = `📅 All`;
         trigger.classList.remove('is-active');
         if (btnClear) btnClear.style.display = 'none';
       } else {
-        let prefix = '📅 Date:';
-        if (activeDateFilter.length === 4) prefix = '📅 Year:';
-        else if (activeDateFilter.length === 7) prefix = '📅 Month:';
-        label.innerHTML = `<span class="filter-text-muted">${prefix}</span> <span class="filter-text-val">${activeDateFilter}</span>`;
+        label.innerHTML = `<span class="filter-text-muted">📅</span> <span class="filter-text-val">${activeDateFilter}</span>`;
         trigger.classList.add('is-active');
         if (btnClear) btnClear.style.display = 'inline-flex';
       }
@@ -2765,10 +2789,19 @@
       const currentFile = currentDisplayList[currentIndex];
       mainImg.src = '/photo/' + encodeURIComponent(currentFile);
       if (photoFilename) {
+        photoFilename.textContent = currentFile;
         const pDate = photoDates[currentFile];
-        const dateHtml = pDate ? ` <span style="color:#60a5fa; font-size:11px; margin-left:6px; font-weight:600;">📅 ${pDate}</span>` : '';
-        photoFilename.innerHTML = `${currentFile}${dateHtml}`;
-        photoFilename.title = `${currentFile} (${pDate || 'No date'})`;
+        photoFilename.title = `${currentFile}${pDate ? ' (' + pDate + ')' : ''}`;
+      }
+      const dateChip = document.getElementById('photo-date-chip');
+      if (dateChip) {
+        const pDate = photoDates[currentFile];
+        if (pDate && pDate !== 'Unknown') {
+          dateChip.textContent = `📅 ${pDate}`;
+          dateChip.style.display = 'inline-block';
+        } else {
+          dateChip.style.display = 'none';
+        }
       }
       
       const dateSuffix = (activeDateFilter !== 'All') ? ` [📅 ${activeDateFilter}]` : '';
