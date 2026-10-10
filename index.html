@@ -626,6 +626,83 @@
       margin: 3px 0;
     }
 
+    /* Date Filter Hierarchical Dropdown Styles */
+    .date-section-header {
+      font-size: 10px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.6px;
+      padding: 6px 6px 3px 6px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .date-tree-item {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 2px;
+    }
+    .date-tree-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 11px;
+      color: #e2e8f0;
+      transition: background 0.15s;
+    }
+    .date-tree-row:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .date-tree-row.active {
+      background: rgba(59, 130, 246, 0.25);
+      color: #60a5fa;
+      font-weight: 700;
+    }
+    .date-expand-toggle {
+      width: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      margin-right: 4px;
+      color: #94a3b8;
+      transition: transform 0.15s ease;
+    }
+    .date-expand-toggle.open {
+      transform: rotate(90deg);
+    }
+    .date-tree-children {
+      padding-left: 12px;
+      display: none;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .date-tree-children.open {
+      display: flex;
+    }
+    .date-tag-btn {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #cbd5e1;
+      cursor: pointer;
+      margin-left: 6px;
+      transition: all 0.15s;
+    }
+    .date-tag-btn:hover {
+      background: rgba(59, 130, 246, 0.35);
+      color: #93c5fd;
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+
     /* Selection Pill on Photo */
     .selection-pill {
       position: absolute;
@@ -1670,10 +1747,17 @@
             <span id="date-filter-label">📅 Date: All</span> ▾
             <span class="btn-clear-inline" id="btn-clear-date-inline" onclick="event.stopPropagation(); applyDateFilter('All');" title="Clear date filter" style="display:none;">✕</span>
           </button>
-          <div class="filter-dropdown" id="date-dropdown" style="max-height: 380px; overflow-y: auto; min-width: 195px;">
-            <div style="padding: 4px 6px; position: sticky; top: 0; background: rgba(18, 21, 31, 0.98); z-index: 2;">
-              <input type="text" id="date-search-input" placeholder="Search date (e.g. 2025-11-06)..." style="width: 100%; padding: 5px 8px; border-radius: 6px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 11px; outline: none; box-sizing: border-box;" oninput="filterDateOptions(this.value)">
+          <div class="filter-dropdown" id="date-dropdown" style="max-height: 480px; overflow-y: auto; width: 280px; padding: 6px; box-sizing: border-box;">
+            <!-- Calendar Picker & Quick Clear -->
+            <div style="padding: 4px 2px 8px 2px; display: flex; gap: 6px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px;">
+              <input type="date" id="date-picker-input" title="Pick specific date" style="flex: 1; padding: 5px 8px; border-radius: 6px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 11px; outline: none; color-scheme: dark; font-family: inherit;" onchange="if(this.value) applyDateFilter(this.value)">
+              <button class="filter-opt" style="padding: 5px 10px; width: auto; font-size: 11px; font-weight: 700; border-radius: 6px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);" onclick="applyDateFilter('All')">Clear</button>
             </div>
+            <!-- Live Search -->
+            <div style="padding: 0 2px 6px 2px;">
+              <input type="text" id="date-search-input" placeholder="🔍 Search (e.g. 2025-11-06)..." style="width: 100%; padding: 5px 8px; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; font-size: 11px; outline: none; box-sizing: border-box; font-family: inherit;" oninput="filterDateOptions(this.value)">
+            </div>
+            <!-- All Dates option -->
             <button class="filter-opt active" id="dopt-all" onclick="applyDateFilter('All')">All Dates (<span id="dcount-all">0</span>)</button>
             <div class="filter-divider"></div>
             <div id="dynamic-date-opts"></div>
@@ -2088,11 +2172,18 @@
       }
     });
 
+    function matchesDateFilter(fname) {
+      if (!activeDateFilter || activeDateFilter === 'All') return true;
+      const d = photoDates[fname] || 'Unknown';
+      if (activeDateFilter === 'Unknown') return d === 'Unknown';
+      return d === activeDateFilter || d.startsWith(activeDateFilter);
+    }
+
     function computeDisplayList() {
       let basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
 
       if (activeDateFilter && activeDateFilter !== 'All') {
-        basePool = basePool.filter(f => photoDates[f] === activeDateFilter);
+        basePool = basePool.filter(matchesDateFilter);
       }
 
       if (activeFilter === 'All') {
@@ -2163,7 +2254,7 @@
 
       let basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
       if (activeDateFilter && activeDateFilter !== 'All') {
-        basePool = basePool.filter(f => photoDates[f] === activeDateFilter);
+        basePool = basePool.filter(matchesDateFilter);
       }
       let uncategorizedCount = 0;
 
@@ -2285,46 +2376,230 @@
       if (dd) dd.classList.remove('show');
     }
 
+    const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    function toggleTreeYear(yr) {
+      const toggle = document.getElementById(`toggle-yr-${yr}`);
+      const children = document.getElementById(`children-yr-${yr}`);
+      if (toggle && children) {
+        toggle.classList.toggle('open');
+        children.classList.toggle('open');
+      }
+    }
+
+    function toggleTreeMonth(ym) {
+      const toggle = document.getElementById(`toggle-mo-${ym}`);
+      const children = document.getElementById(`children-mo-${ym}`);
+      if (toggle && children) {
+        toggle.classList.toggle('open');
+        children.classList.toggle('open');
+      }
+    }
+
     function renderDateDropdown() {
       const container = document.getElementById('dynamic-date-opts');
       const dcountAll = document.getElementById('dcount-all');
+      const datePicker = document.getElementById('date-picker-input');
+      const searchInput = document.getElementById('date-search-input');
       if (!container) return;
       container.innerHTML = '';
+      if (searchInput) searchInput.value = '';
 
       const pool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
       if (dcountAll) dcountAll.textContent = pool.length;
 
+      if (datePicker) {
+        if (activeDateFilter && activeDateFilter !== 'All' && activeDateFilter.length === 10) {
+          datePicker.value = activeDateFilter;
+        } else {
+          datePicker.value = '';
+        }
+      }
+
+      // Count photos per date
       const dateCounts = {};
       for (const fname of pool) {
         const d = photoDates[fname] || 'Unknown';
         dateCounts[d] = (dateCounts[d] || 0) + 1;
       }
 
-      const sortedDates = Object.keys(dateCounts).sort().reverse();
+      const validDates = Object.keys(dateCounts).filter(d => d !== 'Unknown').sort();
+      const unknownCount = dateCounts['Unknown'] || 0;
 
-      sortedDates.forEach(date => {
-        const btn = document.createElement('button');
-        btn.className = `filter-opt ${activeDateFilter === date ? 'active' : ''}`;
-        btn.setAttribute('data-date', date);
-        btn.onclick = () => applyDateFilter(date);
-        btn.innerHTML = `<span>${date}</span> <span class="cat-count" style="margin-left:auto;">${dateCounts[date]}</span>`;
-        container.appendChild(btn);
-      });
+      // 1. Top Event Days (dates with high photo counts)
+      const topDates = [...validDates].sort((a, b) => dateCounts[b] - dateCounts[a]).slice(0, 4);
 
+      // 2. Build Tree Structure: Year -> Month -> [Days]
+      const tree = {};
+      for (const d of validDates) {
+        const parts = d.split('-');
+        if (parts.length === 3) {
+          const [yr, mo, day] = parts;
+          if (!tree[yr]) tree[yr] = { total: 0, months: {} };
+          tree[yr].total += dateCounts[d];
+          if (!tree[yr].months[mo]) tree[yr].months[mo] = { total: 0, days: [] };
+          tree[yr].months[mo].total += dateCounts[d];
+          tree[yr].months[mo].days.push({ date: d, count: dateCounts[d] });
+        }
+      }
+
+      let html = '';
+
+      // Live search results container (hidden initially)
+      html += `<div id="date-search-results" style="display:none; flex-direction:column; gap:2px; margin-bottom:4px;"></div>`;
+
+      // Main tree and top sections
+      html += `<div id="date-main-content">`;
+
+      // Top Event Days Section
+      if (topDates.length > 0 && validDates.length > 1) {
+        html += `<div class="date-section-header"><span>🔥 Top Event Days</span></div>`;
+        html += `<div style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px;">`;
+        topDates.forEach(d => {
+          const isActive = activeDateFilter === d;
+          html += `
+            <div class="filter-opt ${isActive ? 'active' : ''}" style="cursor:pointer;" onclick="applyDateFilter('${d}')">
+              <span>📅 ${d}</span>
+              <span class="cat-count">${dateCounts[d]}</span>
+            </div>`;
+        });
+        html += `</div><div class="filter-divider"></div>`;
+      }
+
+      // Hierarchical Tree by Year & Month
+      const years = Object.keys(tree).sort().reverse();
+      if (years.length > 0) {
+        html += `<div class="date-section-header"><span>📅 Browse by Year / Month</span></div>`;
+        years.forEach(yr => {
+          const yData = tree[yr];
+          const isYrActive = activeDateFilter === yr;
+          const isYrOpen = activeDateFilter.startsWith(yr);
+
+          html += `<div class="date-tree-item" id="year-item-${yr}">`;
+          html += `
+            <div class="date-tree-row ${isYrActive ? 'active' : ''}">
+              <div style="display:flex; align-items:center; flex:1;" onclick="toggleTreeYear('${yr}')">
+                <span class="date-expand-toggle ${isYrOpen ? 'open' : ''}" id="toggle-yr-${yr}">▶</span>
+                <span style="font-weight:700;">${yr}</span>
+                <span style="color:#9ca3af; font-size:10px; margin-left:6px;">(${yData.total})</span>
+              </div>
+              <button class="date-tag-btn" onclick="applyDateFilter('${yr}')" title="Filter all photos from ${yr}">All ${yr}</button>
+            </div>`;
+
+          html += `<div class="date-tree-children ${isYrOpen ? 'open' : ''}" id="children-yr-${yr}">`;
+          
+          const months = Object.keys(yData.months).sort().reverse();
+          months.forEach(mo => {
+            const mData = yData.months[mo];
+            const ym = `${yr}-${mo}`;
+            const isMoActive = activeDateFilter === ym;
+            const isMoOpen = activeDateFilter.startsWith(ym);
+            const mIdx = parseInt(mo, 10) - 1;
+            const mName = MONTH_NAMES[mIdx] || mo;
+
+            html += `<div class="date-tree-item" id="month-item-${ym}">`;
+            html += `
+              <div class="date-tree-row ${isMoActive ? 'active' : ''}">
+                <div style="display:flex; align-items:center; flex:1;" onclick="toggleTreeMonth('${ym}')">
+                  <span class="date-expand-toggle ${isMoOpen ? 'open' : ''}" id="toggle-mo-${ym}">▶</span>
+                  <span>${mName} (${mo})</span>
+                  <span style="color:#9ca3af; font-size:10px; margin-left:6px;">(${mData.total})</span>
+                </div>
+                <button class="date-tag-btn" onclick="applyDateFilter('${ym}')" title="Filter all photos from ${mName} ${yr}">All</button>
+              </div>`;
+
+            html += `<div class="date-tree-children ${isMoOpen ? 'open' : ''}" id="children-mo-${ym}">`;
+            
+            mData.days.sort((a, b) => b.date.localeCompare(a.date)).forEach(dObj => {
+              const isDayActive = activeDateFilter === dObj.date;
+              html += `
+                <div class="filter-opt ${isDayActive ? 'active' : ''}" style="padding: 4px 8px; font-size: 11px;" onclick="applyDateFilter('${dObj.date}')">
+                  <span>${dObj.date}</span>
+                  <span class="cat-count">${dObj.count}</span>
+                </div>`;
+            });
+
+            html += `</div></div>`;
+          });
+
+          html += `</div></div>`;
+        });
+      }
+
+      // Unknown dates if any
+      if (unknownCount > 0) {
+        html += `
+          <div class="filter-divider"></div>
+          <div class="filter-opt ${activeDateFilter === 'Unknown' ? 'active' : ''}" onclick="applyDateFilter('Unknown')">
+            <span>❓ Unknown Date</span>
+            <span class="cat-count">${unknownCount}</span>
+          </div>`;
+      }
+
+      html += `</div>`;
+
+      container.innerHTML = html;
       updateDateFilterUI();
     }
 
     function filterDateOptions(query) {
       const q = query.toLowerCase().trim();
-      document.querySelectorAll('#dynamic-date-opts .filter-opt').forEach(btn => {
-        const d = btn.getAttribute('data-date') || '';
-        btn.style.display = (!q || d.toLowerCase().includes(q)) ? 'flex' : 'none';
+      const searchResults = document.getElementById('date-search-results');
+      const mainContent = document.getElementById('date-main-content');
+      if (!searchResults || !mainContent) return;
+
+      if (!q) {
+        searchResults.style.display = 'none';
+        searchResults.innerHTML = '';
+        mainContent.style.display = 'block';
+        return;
+      }
+
+      mainContent.style.display = 'none';
+      searchResults.style.display = 'flex';
+      searchResults.innerHTML = '';
+
+      const pool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
+      const dateCounts = {};
+      for (const fname of pool) {
+        const d = photoDates[fname] || 'Unknown';
+        dateCounts[d] = (dateCounts[d] || 0) + 1;
+      }
+
+      const allDates = Object.keys(dateCounts).sort().reverse();
+      const matches = allDates.filter(d => {
+        if (d.toLowerCase().includes(q)) return true;
+        if (d.includes('-')) {
+          const [yr, mo, day] = d.split('-');
+          const mIdx = parseInt(mo, 10) - 1;
+          const mName = MONTH_NAMES[mIdx] || '';
+          if (mName.toLowerCase().includes(q)) return true;
+        }
+        return false;
+      });
+
+      if (matches.length === 0) {
+        searchResults.innerHTML = `<div style="font-size:11px; color:#9ca3af; padding:8px; text-align:center;">No dates found matching "${query}"</div>`;
+        return;
+      }
+
+      matches.forEach(d => {
+        const btn = document.createElement('button');
+        btn.className = `filter-opt ${activeDateFilter === d ? 'active' : ''}`;
+        btn.onclick = () => applyDateFilter(d);
+        btn.innerHTML = `<span>📅 ${d}</span> <span class="cat-count">${dateCounts[d]}</span>`;
+        searchResults.appendChild(btn);
       });
     }
 
     function applyDateFilter(date) {
       activeDateFilter = date;
       closeDateMenu();
+
+      const dp = document.getElementById('date-picker-input');
+      if (dp) {
+        dp.value = (date && date.length === 10) ? date : '';
+      }
 
       const currentFile = currentDisplayList[currentIndex];
       currentDisplayList = computeDisplayList();
@@ -2335,6 +2610,7 @@
         currentIndex = 0;
       }
 
+      renderDateDropdown();
       updateDateFilterUI();
       updateCounts();
       updateFilterUI();
@@ -2343,6 +2619,10 @@
 
       if (date === 'All') {
         showToast(`Showing all dates (${currentDisplayList.length} photos)`);
+      } else if (date.length === 4) {
+        showToast(`📅 Filtered Year: ${date} (${currentDisplayList.length} photos)`);
+      } else if (date.length === 7) {
+        showToast(`📅 Filtered Month: ${date} (${currentDisplayList.length} photos)`);
       } else {
         showToast(`📅 Filtered Date: ${date} (${currentDisplayList.length} photos)`);
       }
@@ -2357,16 +2637,16 @@
       if (!trigger || !label) return;
 
       if (optAll) optAll.classList.toggle('active', activeDateFilter === 'All');
-      document.querySelectorAll('#dynamic-date-opts .filter-opt').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-date') === activeDateFilter);
-      });
 
       if (activeDateFilter === 'All') {
         label.innerHTML = `📅 Date: All`;
         trigger.classList.remove('is-active');
         if (btnClear) btnClear.style.display = 'none';
       } else {
-        label.innerHTML = `<span class="filter-text-muted">📅 Date:</span> <span class="filter-text-val">${activeDateFilter}</span>`;
+        let prefix = '📅 Date:';
+        if (activeDateFilter.length === 4) prefix = '📅 Year:';
+        else if (activeDateFilter.length === 7) prefix = '📅 Month:';
+        label.innerHTML = `<span class="filter-text-muted">${prefix}</span> <span class="filter-text-val">${activeDateFilter}</span>`;
         trigger.classList.add('is-active');
         if (btnClear) btnClear.style.display = 'inline-flex';
       }
@@ -2711,7 +2991,7 @@
       gridContainer.innerHTML = '';
       let basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
       if (activeDateFilter && activeDateFilter !== 'All') {
-        basePool = basePool.filter(f => photoDates[f] === activeDateFilter);
+        basePool = basePool.filter(matchesDateFilter);
       }
       
       let filtered = basePool;
