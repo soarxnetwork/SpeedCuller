@@ -4,6 +4,7 @@ import shutil
 import urllib.parse
 import subprocess
 import re
+from datetime import datetime
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -257,6 +258,27 @@ class SpeedCullerHandler(SimpleHTTPRequestHandler):
                             if not f.startswith('.') and os.path.splitext(f)[1].lower() in VALID_EXTS:
                                 cat_map[f] = cat_name
 
+            # 4. Date extraction
+            date_re = re.compile(r'(\d{4})[-_]?(\d{2})[-_]?(\d{2})')
+            photo_dates = {}
+            for f in set(master_photos + selected_photos):
+                m = date_re.search(f)
+                if m:
+                    y, mon, d = m.groups()
+                    if 2000 <= int(y) <= 2030 and 1 <= int(mon) <= 12 and 1 <= int(d) <= 31:
+                        photo_dates[f] = f"{y}-{mon}-{d}"
+                        continue
+                p_src = os.path.join(src_dir, f)
+                p_ovr = os.path.join(overall_dir, f)
+                p_actual = p_src if os.path.exists(p_src) else (p_ovr if os.path.exists(p_ovr) else None)
+                if p_actual:
+                    try:
+                        photo_dates[f] = datetime.fromtimestamp(os.path.getmtime(p_actual)).strftime('%Y-%m-%d')
+                    except Exception:
+                        photo_dates[f] = "Unknown"
+                else:
+                    photo_dates[f] = "Unknown"
+
             res_data = {
                 'drive_connected': True,
                 'volume_path': vol_path,
@@ -269,7 +291,8 @@ class SpeedCullerHandler(SimpleHTTPRequestHandler):
                 'master_photos': master_photos,
                 'selected_photos': selected_photos,
                 'photos': selected_photos, # default compatibility
-                'assigned': cat_map
+                'assigned': cat_map,
+                'photo_dates': photo_dates
             }
 
             self.send_response(200)

@@ -1663,6 +1663,22 @@
             <button class="filter-opt master-only" id="fopt-unselected" onclick="applyFilter('Unselected')" style="display:none;">○ Unselected Only</button>
           </div>
         </div>
+
+        <!-- Date Filter Dropdown -->
+        <div class="filter-wrapper" id="date-filter-wrapper">
+          <button class="filter-trigger" id="date-filter-trigger" onclick="toggleDateMenu()">
+            <span id="date-filter-label">📅 Date: All</span> ▾
+            <span class="btn-clear-inline" id="btn-clear-date-inline" onclick="event.stopPropagation(); applyDateFilter('All');" title="Clear date filter" style="display:none;">✕</span>
+          </button>
+          <div class="filter-dropdown" id="date-dropdown" style="max-height: 380px; overflow-y: auto; min-width: 195px;">
+            <div style="padding: 4px 6px; position: sticky; top: 0; background: rgba(18, 21, 31, 0.98); z-index: 2;">
+              <input type="text" id="date-search-input" placeholder="Search date (e.g. 2025-11-06)..." style="width: 100%; padding: 5px 8px; border-radius: 6px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 11px; outline: none; box-sizing: border-box;" oninput="filterDateOptions(this.value)">
+            </div>
+            <button class="filter-opt active" id="dopt-all" onclick="applyDateFilter('All')">All Dates (<span id="dcount-all">0</span>)</button>
+            <div class="filter-divider"></div>
+            <div id="dynamic-date-opts"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Center: Filename & Position Counter -->
@@ -2073,7 +2089,11 @@
     });
 
     function computeDisplayList() {
-      const basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
+      let basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
+
+      if (activeDateFilter && activeDateFilter !== 'All') {
+        basePool = basePool.filter(f => photoDates[f] === activeDateFilter);
+      }
 
       if (activeFilter === 'All') {
         return basePool;
@@ -2141,7 +2161,10 @@
       const counts = {};
       Object.values(activeCategories).forEach(cat => counts[cat] = 0);
 
-      const basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
+      let basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
+      if (activeDateFilter && activeDateFilter !== 'All') {
+        basePool = basePool.filter(f => photoDates[f] === activeDateFilter);
+      }
       let uncategorizedCount = 0;
 
       for (const fname of basePool) {
@@ -2249,6 +2272,106 @@
       filterDropdown.classList.remove('show');
     }
 
+    let activeDateFilter = 'All';
+    let photoDates = {};
+
+    function toggleDateMenu() {
+      const dd = document.getElementById('date-dropdown');
+      if (dd) dd.classList.toggle('show');
+    }
+
+    function closeDateMenu() {
+      const dd = document.getElementById('date-dropdown');
+      if (dd) dd.classList.remove('show');
+    }
+
+    function renderDateDropdown() {
+      const container = document.getElementById('dynamic-date-opts');
+      const dcountAll = document.getElementById('dcount-all');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const pool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
+      if (dcountAll) dcountAll.textContent = pool.length;
+
+      const dateCounts = {};
+      for (const fname of pool) {
+        const d = photoDates[fname] || 'Unknown';
+        dateCounts[d] = (dateCounts[d] || 0) + 1;
+      }
+
+      const sortedDates = Object.keys(dateCounts).sort().reverse();
+
+      sortedDates.forEach(date => {
+        const btn = document.createElement('button');
+        btn.className = `filter-opt ${activeDateFilter === date ? 'active' : ''}`;
+        btn.setAttribute('data-date', date);
+        btn.onclick = () => applyDateFilter(date);
+        btn.innerHTML = `<span>${date}</span> <span class="cat-count" style="margin-left:auto;">${dateCounts[date]}</span>`;
+        container.appendChild(btn);
+      });
+
+      updateDateFilterUI();
+    }
+
+    function filterDateOptions(query) {
+      const q = query.toLowerCase().trim();
+      document.querySelectorAll('#dynamic-date-opts .filter-opt').forEach(btn => {
+        const d = btn.getAttribute('data-date') || '';
+        btn.style.display = (!q || d.toLowerCase().includes(q)) ? 'flex' : 'none';
+      });
+    }
+
+    function applyDateFilter(date) {
+      activeDateFilter = date;
+      closeDateMenu();
+
+      const currentFile = currentDisplayList[currentIndex];
+      currentDisplayList = computeDisplayList();
+
+      if (currentFile && currentDisplayList.includes(currentFile)) {
+        currentIndex = currentDisplayList.indexOf(currentFile);
+      } else {
+        currentIndex = 0;
+      }
+
+      updateDateFilterUI();
+      updateCounts();
+      updateFilterUI();
+      updateView();
+      saveCurrentState();
+
+      if (date === 'All') {
+        showToast(`Showing all dates (${currentDisplayList.length} photos)`);
+      } else {
+        showToast(`📅 Filtered Date: ${date} (${currentDisplayList.length} photos)`);
+      }
+    }
+
+    function updateDateFilterUI() {
+      const trigger = document.getElementById('date-filter-trigger');
+      const label = document.getElementById('date-filter-label');
+      const btnClear = document.getElementById('btn-clear-date-inline');
+      const optAll = document.getElementById('dopt-all');
+
+      if (!trigger || !label) return;
+
+      if (optAll) optAll.classList.toggle('active', activeDateFilter === 'All');
+      document.querySelectorAll('#dynamic-date-opts .filter-opt').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-date') === activeDateFilter);
+      });
+
+      if (activeDateFilter === 'All') {
+        label.innerHTML = `📅 Date: All`;
+        trigger.classList.remove('is-active');
+        if (btnClear) btnClear.style.display = 'none';
+      } else {
+        label.innerHTML = `<span class="filter-text-muted">📅 Date:</span> <span class="filter-text-val">${activeDateFilter}</span>`;
+        trigger.classList.add('is-active');
+        if (btnClear) btnClear.style.display = 'inline-flex';
+      }
+    }
+
     function switchSource(mode) {
       if (sourceMode === mode) return;
       sourceMode = mode;
@@ -2271,6 +2394,7 @@
 
       updateCounts();
       updateFilterUI();
+      renderDateDropdown();
       updateView();
       saveCurrentState();
 
@@ -2361,12 +2485,15 @@
       const currentFile = currentDisplayList[currentIndex];
       mainImg.src = '/photo/' + encodeURIComponent(currentFile);
       if (photoFilename) {
-        photoFilename.textContent = currentFile;
-        photoFilename.title = currentFile;
+        const pDate = photoDates[currentFile];
+        const dateHtml = pDate ? ` <span style="color:#60a5fa; font-size:11px; margin-left:6px; font-weight:600;">📅 ${pDate}</span>` : '';
+        photoFilename.innerHTML = `${currentFile}${dateHtml}`;
+        photoFilename.title = `${currentFile} (${pDate || 'No date'})`;
       }
       
+      const dateSuffix = (activeDateFilter !== 'All') ? ` [📅 ${activeDateFilter}]` : '';
       const filterSuffix = (activeFilter !== 'All') ? ` [${activeFilter}]` : '';
-      statInfo.textContent = `${currentIndex + 1} / ${currentDisplayList.length}${filterSuffix}`;
+      statInfo.textContent = `${currentIndex + 1} / ${currentDisplayList.length}${dateSuffix}${filterSuffix}`;
       updateCounts();
 
       // Shortlist Selection Status
@@ -2582,7 +2709,10 @@
 
     function renderGrid() {
       gridContainer.innerHTML = '';
-      const basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
+      let basePool = (sourceMode === 'master') ? masterPhotos : selectedPhotos;
+      if (activeDateFilter && activeDateFilter !== 'All') {
+        basePool = basePool.filter(f => photoDates[f] === activeDateFilter);
+      }
       
       let filtered = basePool;
       if (currentGridFilter === 'Selected') {
@@ -3104,6 +3234,8 @@
           resetZoom();
         } else if (activeFilter !== 'All') {
           applyFilter('All');
+        } else if (activeDateFilter !== 'All') {
+          applyDateFilter('All');
         }
       } else if (e.key === 'g' || e.key === 'G') {
         e.preventDefault();
@@ -3115,8 +3247,11 @@
     });
 
     window.addEventListener('click', (e) => {
-      if (!e.target.closest('.filter-wrapper')) {
+      if (!e.target.closest('#filter-trigger') && !e.target.closest('#filter-dropdown')) {
         closeFilterMenu();
+      }
+      if (!e.target.closest('#date-filter-wrapper')) {
+        closeDateMenu();
       }
       if (!e.target.closest('.project-wrapper')) {
         closeProjectMenu();
@@ -3145,9 +3280,11 @@
         masterPhotos = data.master_photos || [];
         selectedSet = new Set(selectedPhotos);
         assignedMap = data.assigned || {};
+        photoDates = data.photo_dates || {};
 
         renderCategoryPills();
         renderFilterDropdown();
+        renderDateDropdown();
         renderGridTabs();
 
         const savedSource = localStorage.getItem('speed_culler_source_mode');

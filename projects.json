@@ -1,5 +1,5 @@
 {
-  "active_project_id": "microsoft_visit",
+  "active_project_id": "vivo_t2_pro",
   "selected_root": "/Volumes/C/Selected",
   "projects": {
     "microsoft_visit": {
@@ -22,6 +22,21 @@
       "name": "ai champs hack 25",
       "source_dir": "/Volumes/C/ai champs hack 25",
       "output_dir": "/Volumes/C/Selected/ai champs hack 25",
+      "categories": {
+        "1": "General",
+        "2": "Quiz",
+        "3": "Judges",
+        "4": "Awards",
+        "5": "Mentors",
+        "6": "Other",
+        "7": "Prizes"
+      }
+    },
+    "vivo_t2_pro": {
+      "id": "vivo_t2_pro",
+      "name": "Vivo T2 Pro - Camera",
+      "source_dir": "/Volumes/A/Phone Backup - T2 Pro/Camera",
+      "output_dir": "/Volumes/C/Selected/Vivo T2 Pro - Camera",
       "categories": {
         "1": "General",
         "2": "Quiz",
